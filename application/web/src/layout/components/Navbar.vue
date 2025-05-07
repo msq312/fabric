@@ -6,11 +6,12 @@
     <div class="right-menu">
       <el-dropdown class="avatar-container" trigger="click">
         <div class="avatar-wrapper">
-          <img src="https://foruda.gitee.com/avatar/1708144926151716189/4941425_real__cool_1708144926.png!avatar200" class="user-avatar">
+          <img src="https://foruda.gitee.com/avatar/1708144926151716189/4941425_real__cool_1708144926.png!avatar200"
+            class="user-avatar">
           <i class="el-icon-caret-bottom" />
         </div>
         <el-dropdown-menu slot="dropdown" class="user-dropdown">
-          <a target="_blank" href="https://gitee.com/real__cool/fabric-trace">
+          <!-- <a target="_blank" href="https://gitee.com/real__cool/fabric-trace">
             <el-dropdown-item>项目地址</el-dropdown-item>
           </a>
           <a target="_blank" href="https://blog.csdn.net/qq_41575489">
@@ -18,8 +19,8 @@
           </a>
           <a target="_blank" href="https://space.bilibili.com/25095014">
             <el-dropdown-item>TrueTechLabs B站</el-dropdown-item>
-          </a>
-          <el-dropdown-item divided @click.native="logout">
+          </a> -->
+          <el-dropdown-item divided @click.native="logout1">
             <span style="display:block;">登出</span>
           </el-dropdown-item>
         </el-dropdown-menu>
@@ -33,6 +34,7 @@ import { mapGetters } from 'vuex'
 import Breadcrumb from '@/components/Breadcrumb'
 import Hamburger from '@/components/Hamburger'
 import logo from '@/layout/components/Sidebar/Logo.vue'
+import { mapActions } from 'vuex'
 
 export default {
   components: {
@@ -49,13 +51,22 @@ export default {
     ])
   },
   methods: {
+    ...mapActions('user', ['logout']),
+    async logout1() {
+      try {
+        await this.logout()
+        this.$router.push('/login') // 跳转到登录页面
+      } catch (error) {
+        console.error('退出登录失败:', error)
+      }
+    },
     toggleSideBar() {
       this.$store.dispatch('app/toggleSideBar')
     },
-    async logout() {
-      await this.$store.dispatch('user/logout')
-      this.$router.push(`/login?redirect=${this.$route.fullPath}`)
-    }
+    // async logout() {
+    //   await this.$store.dispatch('user/logout')
+    //   this.$router.push(`/login?redirect=${this.$route.fullPath}`)
+    // }
   }
 }
 </script>
@@ -66,7 +77,7 @@ export default {
   overflow: hidden;
   position: relative;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0,21,41,.08);
+  box-shadow: 0 1px 4px rgba(0, 21, 41, .08);
 
   .hamburger-container {
     line-height: 46px;
@@ -74,7 +85,7 @@ export default {
     float: left;
     cursor: pointer;
     transition: background .3s;
-    -webkit-tap-highlight-color:transparent;
+    -webkit-tap-highlight-color: transparent;
 
     &:hover {
       background: rgba(0, 0, 0, .025)

@@ -1,4 +1,5 @@
 import router from './router'
+//import { generateRoutes } from '@/router/index'
 import store from './store'
 import { Message } from 'element-ui'
 import NProgress from 'nprogress' // progress bar
@@ -10,7 +11,7 @@ NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
 const whiteList = ['/login'] // no redirect whitelist
 
-router.beforeEach(async(to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   // start progress bar
   NProgress.start()
 
@@ -33,6 +34,11 @@ router.beforeEach(async(to, from, next) => {
         try {
           // get user info
           await store.dispatch('user/getInfo')
+
+          // const userType = store.getters.userType
+          // const newRoutes = generateRoutes(userType)
+          // store.dispatch('permission/generateRoutes', newRoutes)
+          // router.addRoutes(newRoutes)
 
           next()
         } catch (error) {

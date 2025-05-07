@@ -30,13 +30,12 @@ export default {
     getBreadcrumb() {
       // only show routes with meta.title
       let matched = this.$route.matched.filter(item => item.meta && item.meta.title)
-      const first = matched[0]
-
-      if (!this.isUplink(first)) {
-        matched = [{ path: '/uplink1', meta: { title: '溯源信息录入' }}].concat(matched)
+      // 只取最后一项
+      if (matched.length > 0) {
+        this.levelList = [matched[matched.length - 1]];
+      } else {
+        this.levelList = [];
       }
-
-      this.levelList = matched.filter(item => item.meta && item.meta.title && item.meta.breadcrumb !== false)
     },
     isUplink(route) {
       const name = route && route.name

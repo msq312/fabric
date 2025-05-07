@@ -1,5 +1,6 @@
 import { login, logout, getInfo, register } from '@/api/user'
 import { getToken, setToken, removeToken } from '@/utils/auth'
+//import { generateRoutes } from '@/router/index'
 import { resetRouter } from '@/router'
 
 const getDefaultState = () => {
@@ -25,6 +26,7 @@ const mutations = {
   },
   SET_USERTYPE: (state, userType) => {
     state.userType = userType
+    localStorage.setItem('userType', userType)
   },
   SET_AVATAR: (state, avatar) => {
     state.avatar = avatar
@@ -42,7 +44,15 @@ const actions = {
       login(formData).then(response => {
         commit('SET_TOKEN', response.jwt)
         setToken(response.jwt)
-        resolve()
+        commit('SET_USERTYPE', response.userType)
+        // 获取用户信息并设置用户角色
+        getInfo(response.jwt).then(infoResponse => {
+          const { userType } = infoResponse
+          commit('SET_USERTYPE', userType)
+          resolve()
+        }).catch(error => {
+          reject(error)
+        })
       }).catch(error => {
         reject(error)
       })
@@ -90,6 +100,7 @@ const actions = {
     return new Promise((resolve, reject) => {
       logout(state.token).then(() => {
         removeToken() // must remove  token  first
+        localStorage.removeItem('userType') // 清除 localStorage 中的用户角色信息
         resetRouter()
         commit('RESET_STATE')
         resolve()

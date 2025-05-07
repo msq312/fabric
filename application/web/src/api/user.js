@@ -22,17 +22,46 @@ export function register(data) {
   })
 }
 
-export function getInfo(token) {
+export function getUserInfo(data) {
+  return request({
+    url: '/getUserInfo',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+export function getAdminInfo(data) {
+  return request({
+    url: '/getAdminInfo',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+export function getInfo(data) {
   return request({
     url: '/getInfo',
     method: 'post',
     headers: {
-      'Authorization': `Bearer ${token}`
-    }
-    // params: { token }
+      'Content-Type': 'multipart/form-data'
+    },
+    data
   })
 }
-
+export function getName(data) {
+  return request({
+    url: '/getName',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
 export function logout() {
   return request({
     url: '/logout',

@@ -26,12 +26,12 @@ func MysqlInit() (err error) {
 	// 创建数据库与表（如果不存在的话）
 	db.Exec("CREATE DATABASE IF NOT EXISTS " + viper.GetString("mysql.db"))
 	db.Exec("USE " + viper.GetString("mysql.db"))
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS users (user_id VARCHAR(50) PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(50) NOT NULL, realInfo VARCHAR(100))")
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS users (user_id VARCHAR(50) PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(50) NOT NULL, realInfo VARCHAR(100), user_type ENUM('普通用户', '管理员') NOT NULL DEFAULT '普通用户')")
 	if err != nil {
 		panic(err.Error())
 	}
 	// 重新配置下数据库连接信息
-	dsn = viper.GetString("mysql.user") + ":" + viper.GetString("mysql.password") + "@tcp(" + viper.GetString("mysql.host") + ":" + viper.GetString("mysql.port") + ")/" + viper.GetString("mysql.db")
+	dsn = viper.GetString("mysql.user") + ":" + viper.GetString("mysql.password") + "@tcp(" + viper.GetString("mysql.host") + ":" + viper.GetString("mysql.port") + ")/" + viper.GetString("mysql.db")+ "?charset=utf8mb4"
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		return err
@@ -55,8 +55,8 @@ func InsertUser(user *model.MysqlUser) (err error) {
 	if count > 0 {
 		return errors.New("用户名已存在")
 	}
-	sqlStr = "insert into users(user_id,username,password,realInfo) values(?,?,?,?)"
-	_, err = db.Exec(sqlStr, user.UserID, user.Username, EncryptByMD5(user.Password), EncryptByMD5(user.RealInfo))
+	sqlStr = "insert into users(user_id,username,password,realInfo,user_type) values(?,?,?,?,?)"
+	_, err = db.Exec(sqlStr, user.UserID, user.Username, EncryptByMD5(user.Password), EncryptByMD5(user.RealInfo),user.UserType)
 	if err != nil {
 		return err
 	}
@@ -85,6 +85,15 @@ func GetUserID(username string) (userID string, err error) {
 		return "", err
 	}
 	return userID, nil
+}
+// 获取用户类型
+func GetUserType(username string) (userType string, err error) {
+	sqlStr := "select user_type from users where username = ?"
+	err = db.QueryRow(sqlStr, username).Scan(&userType)
+	if err != nil {
+		return "", err
+	}
+	return userType, nil
 }
 
 // 获取用户姓名

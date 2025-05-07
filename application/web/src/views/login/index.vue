@@ -1,75 +1,49 @@
 <template>
   <div class="login-container">
-    <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
+    <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on"
+      label-position="left">
 
       <div class="title-container">
-        <h3 class="title" style="color: white;">基于区块链的农产品溯源系统</h3>
+        <h3 class="title" style="color: white;">基于区块链的电力交易系统</h3>
       </div>
       <div v-show="isLoginPage">
         <el-form-item prop="username">
           <span class="svg-container">
             <svg-icon icon-class="user" />
           </span>
-          <el-input
-            ref="username"
-            v-model="loginForm.username"
-            placeholder="请输入账号"
-            name="username"
-            type="text"
-            tabindex="1"
-            auto-complete="on"
-          />
+          <el-input ref="username" v-model="loginForm.username" placeholder="请输入账号" name="username" type="text"
+            tabindex="1" auto-complete="on" />
         </el-form-item>
 
         <el-form-item prop="password">
           <span class="svg-container">
             <svg-icon icon-class="password" />
           </span>
-          <el-input
-            :key="passwordType"
-            ref="password"
-            v-model="loginForm.password"
-            :type="passwordType"
-            placeholder="请输入密码"
-            name="password"
-            tabindex="2"
-            auto-complete="on"
-            @keyup.enter.native="handleLogin"
-          />
+          <el-input :key="passwordType" ref="password" v-model="loginForm.password" :type="passwordType"
+            placeholder="请输入密码" name="password" tabindex="2" auto-complete="on" @keyup.enter.native="handleLogin" />
           <span class="show-pwd" @click="showPwd">
             <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
           </span>
         </el-form-item>
-        <el-button :loading="loading" type="info" style="width:20%;margin-bottom:30px;" @click="handleRegister">注册</el-button>
-        <el-button :loading="loading" type="primary" style="width:30%;margin-bottom:30px; float: right" @click.native.prevent="handleLogin">登录</el-button>
+        <el-button :loading="loading" type="info" style="width:20%;margin-bottom:30px;"
+          @click="handleRegister">注册</el-button>
+        <el-button :loading="loading" type="primary" style="width:30%;margin-bottom:30px; float: right"
+          @click.native.prevent="handleLogin">登录</el-button>
       </div>
       <div v-show="!isLoginPage">
         <el-form-item prop="username">
           <span class="svg-container">
             <svg-icon icon-class="user" />
           </span>
-          <el-input
-            v-model="registerForm.username"
-            placeholder="请输入账号"
-            name="username"
-            type="text"
-            auto-complete="on"
-          />
+          <el-input v-model="registerForm.username" placeholder="请输入账号" name="username" type="text"
+            auto-complete="on" />
         </el-form-item>
         <el-form-item prop="password">
           <span class="svg-container">
             <svg-icon icon-class="password" />
           </span>
-          <el-input
-            :key="passwordType"
-            ref="password"
-            v-model="registerForm.password"
-            :type="passwordType"
-            placeholder="请输入密码"
-            name="password"
-            auto-complete="on"
-            style="color: white !important;"
-          />
+          <el-input :key="passwordType" ref="password" v-model="registerForm.password" :type="passwordType"
+            placeholder="请输入密码" name="password" auto-complete="on" style="color: white !important;" />
           <span class="show-pwd" @click="showPwd">
             <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
           </span>
@@ -78,29 +52,21 @@
           <span class="svg-container">
             <svg-icon icon-class="password" />
           </span>
-          <el-input
-            v-model="registerForm.password2"
-            placeholder="请再次输入密码"
-            name="password"
-            auto-complete="on"
-            :type="passwordType"
-          />
+          <el-input v-model="registerForm.password2" placeholder="请再次输入密码" name="password" auto-complete="on"
+            :type="passwordType" />
           <span class="show-pwd" @click="showPwd">
             <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
           </span>
         </el-form-item>
         <el-form-item style="width: 200px">
           <el-select v-model="registerForm.userType" placeholder="请选择角色">
-            <el-option
-              v-for="item in options"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
+            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-button :loading="loading" type="info" style="width:20%;margin-bottom:30px;" @click="handleRegister">返回</el-button>
-        <el-button :loading="loading" type="primary" style="width:30%;margin-bottom:30px; float: right" @click.native.prevent="submitRegister">提交注册</el-button>
+        <el-button :loading="loading" type="info" style="width:20%;margin-bottom:30px;"
+          @click="handleRegister">返回</el-button>
+        <el-button :loading="loading" type="primary" style="width:30%;margin-bottom:30px; float: right"
+          @click.native.prevent="submitRegister">提交注册</el-button>
       </div>
       <!-- <div class="tips">
         <span style="margin-right:20px;">提示：可以放一些提示</span>
@@ -135,26 +101,17 @@ export default {
         userType: ''
       },
       options: [{
-        value: '种植户',
-        label: '种植户'
+        value: '普通用户',
+        label: '普通用户'
       }, {
-        value: '工厂',
-        label: '工厂'
-      }, {
-        value: '运输司机',
-        label: '运输司机'
-      }, {
-        value: '商店',
-        label: '商店'
-      }, {
-        value: '消费者',
-        label: '消费者'
+        value: '管理员',
+        label: '管理员'
       }]
     }
   },
   watch: {
     $route: {
-      handler: function(route) {
+      handler: function (route) {
         this.redirect = route.query && route.query.redirect
       },
       immediate: true
@@ -174,7 +131,17 @@ export default {
     handleLogin() {
       this.loading = true
       this.$store.dispatch('user/login', this.loginForm).then(() => {
-        this.$router.push({ path: this.redirect || '/' })
+        const userType = this.$store.getters.userType
+        let redirectPath = '/'
+        switch (userType) {
+          case '普通用户':
+            redirectPath = '/uplink'
+            break
+          case '管理员':
+            redirectPath = '/approve' // 假设存在工厂页面
+            break
+        }
+        this.$router.push({ path: this.redirect || redirectPath })
         this.loading = false
       }).catch(() => {
         this.loading = false
@@ -216,8 +183,8 @@ export default {
 /* 修复input 背景不协调 和光标变色 */
 /* Detail see https://github.com/PanJiaChen/vue-element-admin/pull/927 */
 
-$bg:#283443;
-$light_gray:#fff;
+$bg: #283443;
+$light_gray: #fff;
 $cursor: #fff;
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
@@ -246,6 +213,7 @@ $cursor: #fff;
       color: $light_gray;
       height: 47px;
       caret-color: $cursor;
+
       // -webkit-appearance: none;
       &:-webkit-autofill {
         box-shadow: 0 0 0px 1000px $bg inset !important;
@@ -264,9 +232,9 @@ $cursor: #fff;
 </style>
 
 <style lang="scss" scoped>
-$bg:#2d3a4b;
-$dark_gray:#889aa4;
-$light_gray:#eee;
+$bg: #2d3a4b;
+$dark_gray: #889aa4;
+$light_gray: #eee;
 
 .login-container {
   min-height: 100%;
@@ -326,7 +294,7 @@ $light_gray:#eee;
   }
 
   ::v-deep .el-input__inner::placeholder {
-  color: white !important;
+    color: white !important;
   }
 }
 </style>

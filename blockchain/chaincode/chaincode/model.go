@@ -1,112 +1,137 @@
 package chaincode
 
-/*
-定义用户结构体
-用户ID
-用户类型
-实名认证信息哈希,包括用户注册的姓名、身份证号、手机号、注册平台同意协议签名的哈希
-农产品列表
-*/
+const (
+	OfferPrefix = "Offer"
+	ContractPrefix = "Contract"
+)
+const (
+	INIT_BALANCE = 50
+    customFormat = "2006-01-02 15:04:05"
+)
+
+var (
+	MatchFrequency = 10 // 撮合频率，单位为分钟
+	DepositRate    = 0.1 // 保证金率
+	FeeRate        = 0.02 // 手续费率
+)
+
+type Config struct {
+	MatchFrequency int     `json:"matchFrequency"` // 撮合频率，单位为分钟
+	DepositRate    float64 `json:"depositRate"`    // 保证金率
+	FeeRate        float64 `json:"feeRate"`       // 手续费率
+}
+type ApprovalStatus string
+const (
+    NotApplied   ApprovalStatus = "未申请"
+    Pending      ApprovalStatus = "申请中" 
+    Approved     ApprovalStatus = "已通过"
+    Rejected     ApprovalStatus = "未通过"
+)
+
+type AuditStatus string
+const (
+    AuditPending  AuditStatus = "审核中"
+    AuditPassed   AuditStatus = "审核通过"
+    AuditRejected AuditStatus = "审核拒绝"
+)
+// User 表示用户信息
 type User struct {
-	UserID       string   `json:"userID"`
-	UserType     string   `json:"userType"`
-	RealInfoHash string   `json:"realInfoHash"`
-	FruitList    []*Fruit `json:"fruitList"`
+	UserID             string                `json:"userId"`
+	Balance            float64               `json:"balance"`
+	IsSeller           ApprovalStatus                 `json:"isSeller"`
+	IsBuyer            ApprovalStatus            `json:"isBuyer"`
+	//ApproveUserAsSeller bool                  `json:"approveUserAsSeller"`
+	//ApproveUserAsBuyer  bool                  `json:"approveUserAsBuyer"`
+	Offers             []*Offer             `json:"offers"`          // 用户的报价列表
+	Contracts          []*Contract          `json:"contracts"`       // 用户的购电合同 ID 列表
+	BalanceHistory     []*BalanceRecord     `json:"balanceHistory"` // 余额变动历史记录
+	OfferHistory       []*OfferHistoryRecord `json:"offerHistory"`   // 报价历史记录
+	OfferDone          []*Offer             `json:"offerDone"`
+    CreditRating int     `json:"creditRating"` // 信用评级（0-100）
+    TradeCount   int     `json:"tradeCount"`   // 累计交易次数
+}
+type OfferStatus string
+const (
+    OfferPending   OfferStatus = "待撮合"
+    OfferMatched   OfferStatus = "已撮合"
+    OfferCancelled OfferStatus = "已取消"
+)
+// Offer 表示报价信息
+type Offer struct {
+	OfferID   string  `json:"offerId"`
+	UserID    string  `json:"userId"`
+	Price     float64 `json:"price"`
+	Quantity  int     `json:"quantity"`
+	Deposit   float64 `json:"deposit"`   // 保证金
+	IsSeller  bool    `json:"isSeller"`
+	Timestamp string  `json:"timestamp"` // 报价时间
+    UpdatedTime string      `json:"updatedTime"` // 更新时间
+	Status    OfferStatus  `json:"status"`    // 报价状态
+	Round     int     `json:"round"`     // 撮合轮数
+}
+type ContractStatus string
+const (
+    ContractCreated  ContractStatus = "created"
+    ContractSettled  ContractStatus = "settled"
+    ContractCanceled ContractStatus = "canceled"
+)
+// Contract 表示购电合同
+type Contract struct {
+	ContractID string  `json:"contractId"`
+	SellerID   string  `json:"sellerId"`
+	BuyerID    string  `json:"buyerId"`
+	Price      float64 `json:"price"`
+	Quantity   int     `json:"quantity"`
+	Timestamp  string  `json:"timestamp"` // 重命名原Timestamp
+    SettledTime  string  `json:"settledTime"` // 新增结算时间
+    TradeAmount  float64    `json:"tradeAmount"` // 实际交易金额
+    Status       ContractStatus  `json:"status"`      // 状态：created/settled/cancelled
 }
 
-/*
-定义农产品结构体
-溯源码
-种植户输入
-工厂输入
-运输司机输入
-商店输入
-*/
-type Fruit struct {
-	Traceability_code string        `json:"traceability_code"`
-	Farmer_input      Farmer_input  `json:"farmer_input"`
-	Factory_input     Factory_input `json:"factory_input"`
-	Driver_input      Driver_input  `json:"driver_input"`
-	Shop_input        Shop_input    `json:"shop_input"`
+// BalanceRecord 余额变动记录
+type BalanceRecord struct {
+	Timestamp string  `json:"timestamp"`
+	Amount    float64 `json:"amount"`
+	Rest      float64 `json:"rest"`
+	Reason    string  `json:"reason"`
 }
 
-// HistoryQueryResult structure used for handling result of history query
-type HistoryQueryResult struct {
-	Record    *Fruit `json:"record"`
-	TxId      string `json:"txId"`
+// OfferHistoryRecord 报价历史记录
+type OfferHistoryRecord struct {
+	Offer     *Offer  `json:"offer"`
+	Timestamp string  `json:"timestamp"`
+	Action    string  `json:"action"` // 如 "提交", "修改", "完成"
+}
+
+// PlatformAdmin 表示平台管理员
+type PlatformAdmin struct {
+	AdminID            string                `json:"adminId"`
+	Balance            float64               `json:"balance"`          // 存储收到的保证金和手续费
+	BalanceHistory     []*BalanceRecord      `json:"balanceHistory"`   // 余额变动历史记录
+	AdminActionHistory []*AdminActionRecord  `json:"adminActionHistory"` // 管理员操作历史记录
+    Applications []*Application `json:"applications"` // 待审核列表
+	//SellList           []string              `json:"sellList"`         // 审核列表
+	//BuyList            []string              `json:"buyList"`          // 审核列表
+	Contracts          []string          `json:"contracts"`        // 用户的购电合同 ID 列表
+}
+
+type Application struct {
+    ApplicationID string      `json:"applicationId"`
+    UserID        string      `json:"userId"`
+    ApplyType     string      `json:"applyType"` // "buy" or "sell"
+    ApplyTime     string      `json:"applyTime"`
+    AuditStatus   AuditStatus `json:"auditStatus"`
+    AuditTime     string      `json:"auditTime"`
+    //Reason        string      `json:"reason"`      // 拒绝原因
+}
+
+// AdminActionRecord 管理员操作记录
+type AdminActionRecord struct {
+	Action    string `json:"action"`
 	Timestamp string `json:"timestamp"`
-	IsDelete  bool   `json:"isDelete"`
+	Details   string `json:"details"`
 }
 
-/*
-种植户
-农产品的溯源码，一物一码，主打高端市场（自动生成）
-农产品名称
-产地
-种植时间
-采摘时间
-种植户名称
-*/
-type Farmer_input struct {
-	Fa_fruitName   string `json:"fa_fruitName"`
-	Fa_origin      string `json:"fa_origin"`
-	Fa_plantTime   string `json:"fa_plantTime"`
-	Fa_pickingTime string `json:"fa_pickingTime"`
-	Fa_farmerName  string `json:"fa_farmerName"`
-	Fa_Txid        string `json:"fa_txid"`
-	Fa_Timestamp   string `json:"fa_timestamp"`
-}
 
-/*
-工厂
-商品名称
-生产批次
-出厂时间（可以防止黑心商家修改时间）
-工厂名称与厂址
-联系电话
-*/
-type Factory_input struct {
-	Fac_productName     string `json:"fac_productName"`
-	Fac_productionbatch string `json:"fac_productionbatch"`
-	Fac_productionTime  string `json:"fac_productionTime"`
-	Fac_factoryName     string `json:"fac_factoryName"`
-	Fac_contactNumber   string `json:"fac_contactNumber"`
-	Fac_Txid            string `json:"fac_txid"`
-	Fac_Timestamp       string `json:"fac_timestamp"`
-}
 
-/*
-运输司机
-姓名
-年龄
-电话
-车牌号
-运输记录
-*/
-type Driver_input struct {
-	Dr_name      string `json:"dr_name"`
-	Dr_age       string `json:"dr_age"`
-	Dr_phone     string `json:"dr_phone"`
-	Dr_carNumber string `json:"dr_carNumber"`
-	Dr_transport string `json:"dr_transport"`
-	Dr_Txid      string `json:"dr_txid"`
-	Dr_Timestamp string `json:"dr_timestamp"`
-}
 
-/*
-商店
-存入时间
-销售时间
-商店名称
-商店位置
-商店电话
-*/
-type Shop_input struct {
-	Sh_storeTime   string `json:"sh_storeTime"`
-	Sh_sellTime    string `json:"sh_sellTime"`
-	Sh_shopName    string `json:"sh_shopName"`
-	Sh_shopAddress string `json:"sh_shopAddress"`
-	Sh_shopPhone   string `json:"sh_shopPhone"`
-	Sh_Txid        string `json:"sh_txid"`
-	Sh_Timestamp   string `json:"sh_timestamp"`
-}

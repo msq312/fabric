@@ -42,7 +42,6 @@ export const constantRoutes = [
     component: () => import('@/views/404'),
     hidden: true
   },
-
   {
     path: '/',
     component: Layout,
@@ -51,21 +50,44 @@ export const constantRoutes = [
       path: 'uplink',
       name: 'Uplink',
       component: () => import('@/views/uplink/index'),
-      meta: { title: '溯源信息录入', icon: 'el-icon-edit-outline' }
+      meta: { title: '报价信息录入', icon: 'el-icon-edit-outline', roles: ['普通用户'] }
     }]
   },
 
   {
+    path: '/',
+    component: Layout,
+    redirect: '/approve',
+    children: [{
+      path: 'approve',
+      name: 'Approve',
+      component: () => import('@/views/approve/index'),
+      meta: { title: '用户资质审核', icon: 'el-icon-edit-outline', roles: ['管理员'] }
+    }]
+  },
+  {
+    path: '/adtrace',
+    component: Layout,
+    //redirect: '/adtrace',
+    children: [{
+      path: 'adtrace',
+      name: 'Adtrace',
+      component: () => import('@/views/adtrace/index'),
+      meta: { title: '管理员溯源信息查询', icon: 'el-icon-search', roles: ['管理员'] }
+    }]
+  },
+  {
     path: '/trace',
     component: Layout,
+    //redirect: '/trace',
     children: [{
       path: 'trace',
       name: 'Trace',
       component: () => import('@/views/trace/index'),
-      meta: { title: '溯源查询', icon: 'el-icon-search' }
+      meta: { title: '用户溯源信息查询', icon: 'el-icon-search', roles: ['普通用户'] }
     }]
   },
-  
+
   {
     path: 'external-link',
     component: Layout,
@@ -76,26 +98,134 @@ export const constantRoutes = [
       }
     ]
   },
-  {
-    path: '/',
-    component: Layout,
-    redirect: '/build',
-    children: [{
-      path: 'build',
-      name: 'Build',
-      component: () => import('@/views/build/index'),
-      meta: { title: '构建任意溯源系统', icon: 'el-icon-s-tools' }
-    }]
-  },
 
-  // 404 page must be placed at the end !!!
   { path: '*', redirect: '/404', hidden: true }
 ]
 
+// 定义不同用户类型的路由
+export const userRoutes = [
+  
+  {
+    path: '/login',
+    component: () => import('@/views/login/index'),
+    hidden: true
+  },
+
+  {
+    path: '/404',
+    component: () => import('@/views/404'),
+    hidden: true
+  },
+  {
+    path: '/',
+    component: Layout,
+    redirect: '/uplink',
+    children: [{
+      path: 'uplink',
+      name: 'Uplink',
+      component: () => import('@/views/uplink/index'),
+      meta: { title: '报价信息录入', icon: 'el-icon-edit-outline', roles: ['普通用户'] }
+    }]
+  },
+  // {
+  //   path: '/uplink',
+  //   name: 'Uplink',
+  //   component: () => import('@/views/uplink/index'),
+  //   meta: { title: '溯源信息录入', icon: 'el-icon-edit-outline' }
+  // },
+  {
+    path: '/trace',
+    component: Layout,
+    //redirect: '/trace',
+    children: [{
+      path: 'trace',
+      name: 'Trace',
+      component: () => import('@/views/trace/index'),
+      meta: { title: '用户溯源信息查询', icon: 'el-icon-search', roles: ['普通用户'] }
+    }]
+  },
+  {
+    path: 'external-link',
+    component: Layout,
+    children: [
+      {
+        path: 'http://192.168.15.132:8080',
+        meta: { title: '区块链浏览器', icon: 'el-icon-discover' }
+      }
+    ]
+  },
+
+  { path: '*', redirect: '/404', hidden: true }
+]
+
+export const adminRoutes = [
+  
+  {
+    path: '/login',
+    component: () => import('@/views/login/index'),
+    hidden: true
+  },
+
+  {
+    path: '/404',
+    component: () => import('@/views/404'),
+    hidden: true
+  },
+  {
+    path: '/',
+    component: Layout,
+    redirect: '/approve',
+    children: [{
+      path: 'approve',
+      name: 'Approve',
+      component: () => import('@/views/approve/index'),
+      meta: { title: '用户资质审核', icon: 'el-icon-edit-outline', roles: ['管理员'] }
+    }]
+  },
+  // {
+  //   path: '/approve',
+  //   name: 'Approve',
+  //   component: () => import('@/views/approve/index'),
+  //   meta: { title: '用户资质审核', icon: 'el-icon-edit-outline' }
+  // },
+  {
+    path: '/adtrace',
+    component: Layout,
+    //redirect: '/adtrace',
+    children: [{
+      path: 'adtrace',
+      name: 'Adtrace',
+      component: () => import('@/views/adtrace/index'),
+      meta: { title: '管理员溯源信息查询', icon: 'el-icon-search', roles: ['管理员'] }
+    }]
+  },
+  {
+    path: 'external-link',
+    component: Layout,
+    children: [
+      {
+        path: 'http://192.168.15.132:8080',
+        meta: { title: '区块链浏览器', icon: 'el-icon-discover' }
+      }
+    ]
+  },
+
+  { path: '*', redirect: '/404', hidden: true }
+]
+
+// 获取当前用户角色，这里假设从 localStorage 中获取
+const userRole = localStorage.getItem('userType') || '普通用户';
+// 根据用户角色选择路由配置
+let routes = [];
+if (userRole === '管理员') {
+  routes = adminRoutes;
+} else {
+  routes = userRoutes;
+}
 const createRouter = () => new Router({
   // mode: 'history', // require service support
   scrollBehavior: () => ({ y: 0 }),
-  routes: constantRoutes
+  routes: routes
 })
 
 const router = createRouter()
@@ -107,3 +237,31 @@ export function resetRouter() {
 }
 
 export default router
+
+
+
+
+// 根据用户类型生成路由
+// export function generateRoutes(userType) {
+//   let routes = []
+//   switch (userType) {
+//     case '普通用户':
+//       routes = userRoutes
+//       break
+//     case '管理员':
+//       routes = adminRoutes
+//       break
+//     // 其他用user户类型...
+//     default:
+//       routes = []
+//   }
+//   return [
+//     {
+//       path: '/',
+//       component: Layout,
+//       redirect: routes.length > 0 ? routes[0].path : '/',
+//       children: routes
+//     }
+//   ]
+// }
+

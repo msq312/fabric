@@ -1,5 +1,26 @@
 import request from '@/utils/request'
 
+export function userApproveAs(data) {
+  return request({
+    url: '/userApproveAs',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+export function approveUserAs(data) {
+  return request({
+    url: '/approveUserAs',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+
 export function uplink(data) {
   return request({
     url: '/uplink',
@@ -11,10 +32,9 @@ export function uplink(data) {
   })
 }
 
-// getFruitInfo
-export function getFruitInfo(data) {
+export function usermodify(data) {
   return request({
-    url: '/getFruitInfo',
+    url: '/usermodify',
     method: 'post',
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -23,10 +43,10 @@ export function getFruitInfo(data) {
   })
 }
 
-// getFruitList
-export function getFruitList(data) {
+
+export function userGetAllOffer(data) {
   return request({
-    url: '/getFruitList',
+    url: '/userGetAllOffer',
     method: 'post',
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -35,10 +55,9 @@ export function getFruitList(data) {
   })
 }
 
-// getAllFruitInfo
-export function getAllFruitInfo(data) {
+export function adminGetAllOffers(data) {
   return request({
-    url: '/getAllFruitInfo',
+    url: '/adminGetAllOffers',
     method: 'post',
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -47,10 +66,9 @@ export function getAllFruitInfo(data) {
   })
 }
 
-// getFruitHistory
-export function getFruitHistory(data) {
+export function getOfferHistory(data) {
   return request({
-    url: '/getFruitHistory',
+    url: '/getOfferHistory',
     method: 'post',
     headers: {
       'Content-Type': 'multipart/form-data'
@@ -59,3 +77,87 @@ export function getFruitHistory(data) {
   })
 }
 
+export function getBalanceHistory(data) {
+  return request({
+    url: '/getBalanceHistory',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+
+export function getUserContracts(data) {
+  return request({
+    url: '/getUserContracts',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+export function getConfig(data) {
+  return request({
+    url: '/getConfig',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+export function adminModify(data) {
+  return request({
+    url: '/adminModify',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+
+export function getAdminActionHistory(data) {
+  return request({
+    url: '/getAdminActionHistory',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+
+export function getAdminMoneyHistory(data) {
+  return request({
+    url: '/getAdminMoneyHistory',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+
+export function adminGetAllOffer(data) {
+  return request({
+    url: '/adminGetAllOffer',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+export function getAllContract(data) {
+  return request({
+    url: '/getAllContract',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}

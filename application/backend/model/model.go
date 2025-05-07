@@ -10,4 +10,5 @@ type MysqlUser struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	RealInfo string `json:"real_info"`
+	UserType string `json:"user_type"`
 }
