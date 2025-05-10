@@ -132,6 +132,7 @@ export default {
       this.loading = true
       this.$store.dispatch('user/login', this.loginForm).then(() => {
         const userType = this.$store.getters.userType
+        console.log('用户类型:', userType) // 添加调试信息
         let redirectPath = '/'
         switch (userType) {
           case '普通用户':
@@ -141,6 +142,9 @@ export default {
             redirectPath = '/approve' // 假设存在工厂页面
             break
         }
+        //console.log('跳转路径:', redirectPath) // 添加调试信息
+        console.log('User type:', userType);
+        console.log('Redirect path:', redirectPath);
         this.$router.push({ path: this.redirect || redirectPath })
         this.loading = false
       }).catch(() => {

@@ -16,7 +16,8 @@ func UserApproveAs(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	var args []string
 	fmt.Println("into UserApproveAs")
-	args=append(args,ADMINID,userID.(string),c.PostForm("status"))
+	appId:= pkg.GenerateID()[1:]
+	args=append(args,ADMINID,userID.(string),appId,c.PostForm("status"))
 	fmt.Println("args:",args)
 	res, err := pkg.ChaincodeInvoke("UserApproveAs", args)
 	fmt.Println("ok UserApproveAs")
@@ -38,8 +39,8 @@ func ApproveUserAs(c *gin.Context) {
 	//userID,_ := c.Get("userID")
 	var args []string
 	fmt.Println("into ApproveUserAs")
-	//args=append(args,ADMINID,c.PostForm("uid"),c.PostForm("status"),c.PostForm("approve"))
-	args=append(args,ADMINID,c.PostForm("arg1"),c.PostForm("arg2"),c.PostForm("arg3"))
+	
+	args=append(args,ADMINID,c.PostForm("arg1"),c.PostForm("arg2"))
 
 	fmt.Println("ok ApproveUserAs")
 	res, err := pkg.ChaincodeInvoke("ApproveUserAs", args)
@@ -57,21 +58,22 @@ func ApproveUserAs(c *gin.Context) {
 }
 //ExecutePowerMatching执行电力撮合
 func ExecutePowerMatching() string{	
-	_,err := pkg.ChaincodeQuery("MatchOffers", ADMINID)
+	_,err := pkg.ChaincodeInvoke("MatchOffers", []string{ADMINID})
 	if err != nil {
 		// c.JSON(200, gin.H{
 		// 	"message": "MatchOffers failed" + err.Error(),
 		// })
 		return "MatchOffers failed" + err.Error()
 	}
-	_,err=pkg.ChaincodeQuery("SettleContract", ADMINID)
+	fmt.Println("exe well done matchoffers")
+	_,err=pkg.ChaincodeInvoke("SettleContract", []string{ADMINID})
 	if err != nil {
 		// c.JSON(200, gin.H{
 		// 	"message": "SettleContract failed" + err.Error(),
 		// })
 		return "SettleContract failed" + err.Error()
 	}
-	return "well done"
+	return "exe well done settlecontract"
 }
 // 用户报价
 func Uplink(c *gin.Context) {
@@ -94,7 +96,7 @@ func Uplink(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code":              200,
 		"message":           "uplink success",
-		"txid":              res,
+		"data":              res,
 		"offerId":			 args[1],
 	})
 }
@@ -304,7 +306,7 @@ func buildArgs(c *gin.Context,offerId string,create bool) []string {
 	userID, _ := c.Get("userID")
 	//userType, _ := pkg.ChaincodeQuery("GetUserType", userID.(string))
 	args = append(args, userID.(string))
-	fmt.Print(userID)
+	fmt.Println(userID)
 	
 	// // 检查溯源码是否正确
 	// res1, res2,err := pkg.ChaincodeQuery("GetAllOffers", offerId)

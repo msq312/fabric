@@ -96,7 +96,7 @@ func Register(c *gin.Context) {
 	// userID string, userType string, realInfoHash string
 	// 将post请求的参数封装成一个数组args
 	var args []string
-	args = append(args, user.UserID)
+	args = append(args, user.UserID,user.Username)
 	//args = append(args, c.PostForm("userType"))
 	//args = append(args, user.RealInfo)
 	var res string 

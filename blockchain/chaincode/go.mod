@@ -3,7 +3,7 @@ module github.com/hyperledger/fabric-samples/asset-transfer-basic/chaincode-go
 go 1.17
 
 require (
-	github.com/bwmarrin/snowflake v0.3.0
+	github.com/google/uuid v1.3.0
 	github.com/hyperledger/fabric-contract-api-go v1.2.1
 )
 

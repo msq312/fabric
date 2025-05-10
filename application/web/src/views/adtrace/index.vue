@@ -17,8 +17,8 @@
                 <el-checkbox v-model="filters3.in" label="入账" />
                 <el-table :data="filteredBalances" style="width: 100%">
                     <el-table-column label="时间" prop="timestamp" />
-                    <el-table-column label="变化量" prop="amount" />
-                    <el-table-column label="余额" prop="rest" />
+                    <el-table-column label="变化量/元" prop="amount" />
+                    <el-table-column label="余额/元" prop="rest" />
                     <el-table-column label="变动原因" prop="reason" />
                 </el-table>
             </div>
@@ -28,14 +28,14 @@
                 <el-input v-model="input1" placeholder="请输入报价码查询" style="width: 300px;margin-right: 15px;" />
                 <el-button type="primary" plain @click="OfferInfo"> 查询 </el-button>
                 <el-button type="success" plain @click="AllOfferInfo"> 获取所有报价信息 </el-button>
-                <el-checkbox v-model="filters1.purchase" label="购电" />
+                <el-checkbox style="margin-left: 10px;" v-model="filters1.purchase" label="购电" />
                 <el-checkbox v-model="filters1.sale" label="售电" />
                 <el-table :data="filteredOffers" style="width: 100%">
-                    <el-table-column label="报价码" prop="offer.offerID" />
-                    <el-table-column label="用户名" prop="offer.userID" />
-                    <el-table-column label="单价" prop="offer.price" />
-                    <el-table-column label="数量" prop="offer.quantity" />
-                    <el-table-column label="类型" prop="offer.isSeller" :formatter="formatIsSeller" />
+                    <el-table-column label="报价码" prop="offerId" />
+                    <el-table-column label="用户名" prop="userId" />
+                    <el-table-column label="单价" prop="price" />
+                    <el-table-column label="数量" prop="quantity" />
+                    <el-table-column label="类型" prop="isSeller" :formatter="formatIsSeller" />
                     <el-table-column label="操作时间" prop="timestamp" />
                     <el-table-column label="操作备注" prop="action" />
                 </el-table>
@@ -49,7 +49,7 @@
                 <el-checkbox v-model="filters2.purchase" label="购电" />
                 <el-checkbox v-model="filters2.sale" label="售电" />
                 <el-table :data="filteredContracts" style="width: 100%">
-                    <el-table-column label="合同编号" prop="contractID" />
+                    <el-table-column label="合同编号" prop="contractId" />
                     <el-table-column label="售电方" prop="sellerName" />
                     <el-table-column label="购电方" prop="buyerName" />
                     <el-table-column label="电力单价" prop="price" />
@@ -137,12 +137,12 @@ export default {
         },
         getOffer() {
             return (offerId) => {
-                return this.AllOfferInfo().filter(item => item.offerID === offerId);
+                return this.AllOfferInfo().filter(item => item.offerId === offerId);
             };
         },
         getContract() {
             return (Id) => {
-                return this.fetchContracts().filter(item => item.contractID === Id);
+                return this.fetchContracts().filter(item => item.contractId === Id);
             };
         },
     },
@@ -189,6 +189,7 @@ export default {
         fetchContracts() {
             getAllContract().then(res => {
                 const contracts = JSON.parse(res.data);
+                console.log('获取的合同数据:', contracts);
                 Promise.all(contracts.map(contract => {
                     return Promise.all([
                         this.getUserInfo(contract.sellerID),

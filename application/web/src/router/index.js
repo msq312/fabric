@@ -214,6 +214,7 @@ export const adminRoutes = [
 ]
 
 // 获取当前用户角色，这里假设从 localStorage 中获取
+console.log('当前用户角色:', userRole); // 添加调试信息
 const userRole = localStorage.getItem('userType') || '普通用户';
 // 根据用户角色选择路由配置
 let routes = [];
@@ -222,6 +223,7 @@ if (userRole === '管理员') {
 } else {
   routes = userRoutes;
 }
+console.log('当前加载的路由配置:', routes); // 添加调试信息
 const createRouter = () => new Router({
   // mode: 'history', // require service support
   scrollBehavior: () => ({ y: 0 }),
@@ -264,4 +266,3 @@ export default router
 //     }
 //   ]
 // }
-

@@ -47,8 +47,10 @@ const actions = {
         commit('SET_USERTYPE', response.userType)
         // 获取用户信息并设置用户角色
         getInfo(response.jwt).then(infoResponse => {
+          console.log('GetInfo response userType:', infoResponse.userType);
           const { userType } = infoResponse
           commit('SET_USERTYPE', userType)
+          resetRouter() // 重新生成路由配置
           resolve()
         }).catch(error => {
           reject(error)

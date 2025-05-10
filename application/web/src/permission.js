@@ -35,10 +35,16 @@ router.beforeEach(async (to, from, next) => {
           // get user info
           await store.dispatch('user/getInfo')
 
-          // const userType = store.getters.userType
-          // const newRoutes = generateRoutes(userType)
-          // store.dispatch('permission/generateRoutes', newRoutes)
-          // router.addRoutes(newRoutes)
+          // /// 重新初始化路由
+          // const userRole = localStorage.getItem('userType') || '普通用户';
+          // let routes = [];
+          // if (userRole === '管理员') {
+          //     routes = adminRoutes;
+          // } else {
+          //     routes = userRoutes;
+          // }
+          // const newRouter = createRouter(routes);
+          // router.matcher = newRouter.matcher;
 
           next()
         } catch (error) {

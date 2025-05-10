@@ -18,18 +18,21 @@
                             </tr>
                             <tr>
                                 <td style=" padding-right: 10px;">账户余额：</td>
-                                <td>{{ admindata.balance }}/元</td>
+                                <td>{{ admindata.balance.toFixed(2)  }}元</td>
                             </tr>
                         </table>
                     </div>
                     <div class="form-container">
+                        <div style="margin-bottom: 10px; font-weight: bold; font-size: 30px">
+                            系统配置信息
+                        </div>
                         <div style="color:#909399;margin-bottom: 30px">
                             <table style="width: 100%; border-collapse: collapse; text-align: left;line-height: 30px;">
                                 <tr>
                                     <td style="padding-right: 10px;">撮合时间：</td>
                                     <td>
                                         <span v-if="!isEditing.MatchFrequency">{{ adminconfig.matchFrequency
-                                        }}\分钟</span>
+                                        }}分钟/次</span>
                                         <input v-else v-model="tempMatchFrequency" type="text" />
                                     </td>
                                     <td>
@@ -75,21 +78,24 @@
                 <el-checkbox v-model="filters.purchase" label="购电申请" />
                 <el-checkbox v-model="filters.sale" label="售电申请" />
             </div>
-            <el-table :data="displayedOfferData" style="width: 100%">
-                <el-table-column label="用户名" prop="username" />
-                <el-table-column label="申请类型" prop="IsSeller" :formatter="formatIsSeller" />
+            <el-table :data="filteredApplicationData" style="width: 100%">
+                <el-table-column label="用户ID" prop="userId" />
+                <el-table-column label="申请类型" prop="applyType" :formatter="formatIsSeller"/>
+                <el-table-column label="申请时间" prop="applyTime"/>
                 <el-table-column label="审核操作">
                     <template #default="scope">
-                        <div v-if="scope.row.reviewStatus === null">
-                            <el-checkbox v-model="scope.row.approved" label="通过" />
-                            <el-checkbox v-model="!scope.row.approved" label="不通过" />
-                            <el-button type="primary" @click="submitApproval(scope.row)">提交审核</el-button>
+                        <div v-if="scope.row.auditStatus === '审核中'">
+                            <el-checkbox v-model="scope.row.approved" label="是" />
+                            <el-checkbox v-model="scope.row.notapproved" label="否" />
+                            <el-button type="primary" @click="submitApproval(scope.row)">确定</el-button>
                         </div>
                         <div v-else>
-                            {{ scope.row.reviewStatus === true ? '已审核通过' : '已审核未通过' }}
+                            {{ scope.row.auditStatus }}
                         </div>
                     </template>
                 </el-table-column>
+                <el-table-column label="审核时间" prop="auditTime"/>
+
             </el-table>
         </div>
     </div>
@@ -104,12 +110,13 @@ export default {
     data() {
         return {
             admindata: {
-                adminID: '',
+                adminId: '',
                 balance: 0,
                 balanceHistory: [],
                 adminActionHistory: [],
-                sellList: [],
-                buyList: [],
+                applications:[],
+                //sellList: [],
+                //buyList: [],
                 contracts: [],
             },
             isEditing: {
@@ -133,7 +140,7 @@ export default {
                 sale: false
             },
             uinfoData: [],
-            displayedOfferData: [],
+            displayedApplicationData: [],
         };
     },
     computed: {
@@ -141,7 +148,27 @@ export default {
             'name',
             'userType'
         ]),
+        filteredApplicationData() {
+            console.log("filter applications")
+            if (this.isQuerying) {
+                return this.uinfoData;
+            }
+            return this.admindata.applications.filter(item => {
+                //console.log("1111")
 
+                // 如果两个选项都未勾选，显示所有数据
+                if (!this.filters.purchase && !this.filters.sale) return true;
+
+                // 如果勾选了购电，筛选类型为“购电”的数据
+                if (this.filters.purchase && item.applyType==='buy') return true;
+
+                // 如果勾选了售电，筛选类型为“售电”的数据
+                if (this.filters.sale && item.applyType==='sell') return true;
+
+                // 其他情况不显示
+                return false;
+            });
+        },
     },
     created() {
         getAdminInfo().then(res => {
@@ -155,31 +182,40 @@ export default {
         });
     },
     methods: {
-        async filteredOfferData() {
-            if (this.filters.purchase && this.filters.sale) {
-                return [];
+        formatIsSeller(row, column, cellValue) {
+            if(cellValue==='buy'){
+                return '购电';
             }
-            if (this.isQuerying) {
-                data = this.uinfodata
+            if(cellValue==='sell'){
+                return '售电';
             }
-            let data = [];
-            if (this.filters.purchase) {
-                data = this.admindata.buyList.map(item => ({ id: item, IsSeller: false, reviewStatus: null, approved: false }));
-            } else if (this.filters.sale) {
-                data = this.admindata.sellList.map(item => ({ id: item, IsSeller: true, reviewStatus: null, approved: false }));
-            } else {
-                data = [...this.admindata.buyList.map(item => ({ id: item, IsSeller: false, reviewStatus: null, approved: false })), ...this.admindata.sellList.map(item => ({ id: item, IsSeller: true, reviewStatus: null, approved: false }))];
-            }
-            const results = await Promise.all(data.map(async item => {
-                var formData = new FormData()
-                formData.append('id', item.id)
-                const username = await getName(formData);
-                //const username=JSON.parse(res.data)
-                console.log(username)
-                return { ...item, username: username.data };
-            }));
-            this.displayedOfferData = results;
         },
+        
+        // async filteredApplicationData() {
+        //     if (this.filters.purchase && this.filters.sale) {
+        //         return [];
+        //     }
+        //     if (this.isQuerying) {
+        //         data = this.uinfodata
+        //     }
+        //     let data = [];
+        //     if (this.filters.purchase) {
+        //         data = this.admindata.contracts.map(item => ({ id: item, IsSeller: false, reviewStatus: null, approved: false }));
+        //     } else if (this.filters.sale) {
+        //         data = this.admindata.sellList.map(item => ({ id: item, IsSeller: true, reviewStatus: null, approved: false }));
+        //     } else {
+        //         data = [...this.admindata.buyList.map(item => ({ id: item, IsSeller: false, reviewStatus: null, approved: false })), ...this.admindata.sellList.map(item => ({ id: item, IsSeller: true, reviewStatus: null, approved: false }))];
+        //     }
+        //     const results = await Promise.all(data.map(async item => {
+        //         var formData = new FormData()
+        //         formData.append('id', item.id)
+        //         const username = await getName(formData);
+        //         //const username=JSON.parse(res.data)
+        //         console.log(username)
+        //         return { ...item, username: username.data };
+        //     }));
+        //     this.displayedOfferData = results;
+        // },
         config() {
             getConfig().then(res => {
                 this.adminconfig = JSON.parse(res.data)
@@ -238,9 +274,7 @@ export default {
                 this.tempFeeRate = this.adminconfig.feeRate;
             }
         },
-        formatIsSeller(row) {
-            return row.IsSeller ? '售电' : '购电';
-        },
+        
         submitApproval(row) {
             console.log(row)
             const loading = this.$loading({
@@ -250,15 +284,13 @@ export default {
                 background: 'rgba(0, 0, 0, 0.7)'
             })
             var formData = new FormData()
-            formData.append('arg1', row.id)
-            var status = ''
-            if (row.IsSeller) {
-                status = 'sell'
-            } else {
-                status = 'buy'
+            formData.append('arg1', row.applicationId)
+            if(row.approved){
+                formData.append('arg2', row.approved)
+            }else if(row.notapproved){
+                formData.append('arg2', false)
             }
-            formData.append('arg2', status)
-            formData.append('arg3', row.approved)
+            
 
             approveUserAs(formData).then(res => {
                 if (res.code === 200) {
@@ -274,26 +306,38 @@ export default {
                         type: 'error'
                     })
                 }
+                getAdminInfo().then(res => {
+                    this.admindata = JSON.parse(res.data)
+                }).catch(err => {
+                    console.error('获取管理员信息失败:', err);
+                });
             }).catch(err => {
                 loading.close()
                 console.log(err)
             })
-            row.reviewStatus = row.approved;
+            if(row.approved){
+                row.auditStatus= '审核通过';
+            }else{
+                row.auditStatus= '审核拒绝';
+            }
+            
         },
         getUinfo() {
             return (uname) => {
-                return [...this.admindata.buyList, ...this.admindata.sellList].filter(item => item === uname);
+                return this.admindata.applications.filter(item => item.userId === uname);
             };
         },
         ApproveList() {
             // 查询逻辑
             console.log('查询用户名:', this.input);
-            const uinfo = this.getUinfo(this.input);
+            const finduinfo = this.getUinfo();
+            const uinfo = finduinfo(this.input);
             if (uinfo.length > 0) {
                 console.log('查询结果:', uinfo);
                 // 可以在这里更新界面显示查询结果
                 this.$message.success('查找成功');
                 this.uinfoData = uinfo;
+                this.isQuerying = true;
             } else {
                 this.$message.warning('未找到对应的用户申请信息');
             }
@@ -302,7 +346,10 @@ export default {
             // 获取所有用户资质逻辑
             this.filters.purchase = false
             this.filters.sale = false
-            this.filteredOfferData()
+            console.log(this.admindata.applications)
+            this.isQuerying = false;
+            this.input=''
+            //this.filteredApplicationData()
         },
     }
 };
@@ -337,5 +384,6 @@ export default {
 
 .search-container {
     margin-top: 30px;
+    margin-left: 20px;
 }
 </style>

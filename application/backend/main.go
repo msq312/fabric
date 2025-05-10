@@ -52,20 +52,25 @@ func main() {
     }
 	//启动定时器
 	// 创建一个每半小时触发一次的 Ticker
-	MatchFrequency:=con.GetMatchFre()
-	//m,err:=strconv.Atoi(MatchFrequency)
-	if err != nil {
-        fmt.Println("转换错误:", err)
-        //return
-    }
-	fmt.Printf("MatchFrequency=%d\n",MatchFrequency)
-	ticker := time.NewTicker(time.Duration(MatchFrequency)  * time.Minute)
-	defer ticker.Stop()
-	fmt.Printf("启动计时器\n")
+	// MatchFrequency:=con.GetMatchFre()
+	// fmt.Printf("MatchFrequency=%d\n",MatchFrequency)
+	// ticker := time.NewTicker(time.Duration(MatchFrequency)  * time.Minute)
+	// defer ticker.Stop()
+	// fmt.Printf("启动计时器\n")
 	// 启动一个 Goroutine 来处理定时任务
 	go func() {
-		for {
-			fmt.Printf("另一个线程\n")
+		fmt.Printf("另一个线程\n")
+		var ticker *time.Ticker
+		for {		
+            // 获取最新的撮合频率
+            MatchFrequency := con.GetMatchFre()
+            if MatchFrequency > 0 {
+                if ticker != nil {
+                    ticker.Stop()
+                }
+                ticker = time.NewTicker(time.Duration(MatchFrequency) * time.Minute)
+            }
+			
 			select {
 			case <-ticker.C: // 等待 Ticker 的时间信号
 				periodicTask() // 执行定时任务

@@ -34,7 +34,7 @@
               <td style=" padding-right: 10px;">售电资质：</td>
               <td>
                 {{ userdata.isSeller }}
-                <el-button v-if="userdata.isSeller === '未通过'||userdata.isSeller === '未申请'" type="text" @click="applyForQualification('buy')">
+                <el-button v-if="userdata.isSeller === '未通过'||userdata.isSeller === '未申请'" type="text" @click="applyForQualification('sell')">
                   申请
                 </el-button>
               </td>
@@ -47,7 +47,7 @@
             </tr>
             <tr>
               <td style=" padding-right: 10px;">账户余额：</td>
-              <td>{{ userdata.balance }}/元</td>
+              <td>{{ userdata.balance.toFixed(2) }}/元</td>
             </tr>
           </table>
         </div>
@@ -74,10 +74,10 @@
 
           </el-form>
           <span slot="footer" style="color: gray;" class="dialog-footer">
-            <el-button v-show="(userdata.isSeller && offerdata.isSeller) || (userdata.isBuyer && !(offerdata.isSeller))"
-              type="primary" plain style="margin-left: 220px;" @click="submittracedata()">提 交</el-button>
+            <el-button v-show="(userdata.isSeller==='已通过' && offerdata.isSeller) || (userdata.isBuyer==='已通过' && !(offerdata.isSeller))"
+              type="primary" plain style="margin-left: 220px;" @click="submitofferdata()">提 交</el-button>
           </span>
-          <span v-show="!((userdata.isSeller && offerdata.isSeller) || (userdata.isBuyer && !(offerdata.isSeller)))"
+          <span v-show="!((userdata.isSeller==='已通过' && offerdata.isSeller) || (userdata.isBuyer==='已通过' && !(offerdata.isSeller)))"
             slot="footer" style="color: gray;" class="dialog-footer">
             没有权限提交报价！请先完成资质审核!
           </span>
@@ -94,13 +94,37 @@
         <el-checkbox v-model="filters.sale" label="售电" />
       </div>
       <el-table :data="filteredOfferData" style="width: 100%">
-        <el-table-column label="报价码" prop="offerID" />
+        <el-table-column label="报价码" prop="offerId" />
         <el-table-column label="类型" prop="isSeller" :formatter="formatIsSeller" />
-        <el-table-column label="报价" prop="price" />
-        <el-table-column label="数量" prop="quantity" />
-        <el-table-column label="时间" prop="timestamp" />
+        <!-- <el-table-column label="报价/元" prop="price" />
+        <el-table-column label="数量" prop="quantity" /> -->
+        <el-table-column label="报价/元">
+          <template #default="scope">
+            <el-input v-if="scope.row.isEditing" v-model="scope.row.price" />
+            <span v-else>{{ scope.row.price }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="数量">
+          <template #default="scope">
+            <el-input v-if="scope.row.isEditing" v-model="scope.row.quantity" />
+            <span v-else>{{ scope.row.quantity }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="押金" prop="deposit" />
+        <el-table-column label="创建时间" prop="timestamp" />
+        <el-table-column label="更新时间" prop="updatedTime" />
         <el-table-column label="状态" prop="status" />
         <el-table-column label="撮合次数" prop="round" />
+        <el-table-column label="操作">
+          <template #default="scope">
+            <span v-if="scope.row.status === '待撮合'">
+              <el-button v-if="!scope.row.isEditing" type="primary" size="mini" @click="startEdit(scope.row)">修改</el-button>
+              <el-button v-if="!scope.row.isEditing" type="danger" size="mini" @click="cancelOffer(scope.row)">撤销</el-button>
+              <el-button v-if="scope.row.isEditing" type="success" size="mini" @click="submitEdit(scope.row)">提交</el-button>
+            </span>
+            <span v-else>不可操作</span>
+          </template>
+        </el-table-column>
       </el-table>
     </div>
   </div>
@@ -116,7 +140,8 @@ export default {
   data() {
     return {
       userdata: {
-        userID: '',
+        userId: '',
+        userName: '',
         balance: 0,
         isSeller: '',
         isBuyer: '',
@@ -129,15 +154,18 @@ export default {
         tradeCount:0,
       },
       offerdata: {
-        offerID: '',
-        userID: '',
+        offerId: '',
+        userId: '',
+        userName: '',
         price: 0,
         quantity: 0,
         deposit: 0,
         isSeller: false,
         timestamp: '',
+        updateTime: '',
         status: '',
-        round: 0
+        round: 0,
+        isEditing: false,
       },
       isQuerying: false,
       AllOffers: [],
@@ -208,7 +236,7 @@ export default {
   },
   created() {
     getUserInfo().then(res => {
-      console.log("created")
+      //console.log("created")
       this.userdata = JSON.parse(res.data)
       console.log(this.userdata)
     })
@@ -219,11 +247,39 @@ export default {
     },
     getOffer() {
       return (offerId) => {
-        return this.getAllOffers().find(item => item.offerID === offerId);
+        return this.getAllOffers().find(item => item.offerId === offerId);
       };
     },
-    submittracedata() {
-      console.log(this.userdata)
+    // 新增修改报价方法
+    startEdit(row) {
+      row.isEditing = true;
+    },
+    // 新增提交修改方法
+    submitEdit(row) {
+      const formData = new FormData();
+      formData.append('offerId', row.offerId);
+      formData.append('newPrice', row.price);
+      formData.append('newQuantity', row.quantity);
+
+      modifyOffer(formData).then(res => {
+        if (res.code === 200) {
+          this.$message.success('修改成功');
+          row.isEditing = false;
+        } else {
+          this.$message.error('修改失败');
+        }
+      }).catch(err => {
+        console.error(err);
+        this.$message.error('修改失败');
+      });
+    },
+    // 新增撤销报价方法
+    cancelOffer(row) {
+      console.log('撤销报价');
+      // 这里可以添加撤销报价的逻辑
+    },
+    submitofferdata() {
+      //console.log(this.userdata)
       const loading = this.$loading({
         lock: true,
         text: '数据上链中...',
@@ -244,6 +300,16 @@ export default {
           this.$message({
             message: '上链成功，交易ID：' + res.txid + '\n报价码：' + res.offerId,
             type: 'success'
+          })
+          // // 使用后端返回的 offer 数据
+          // const newOffer = JSON.parse(res.data);
+          // console.log('newOffer:');
+          // console.log(newOffer);
+          // this.userdata.offers.push(newOffer);
+          getUserInfo().then(res => {
+            //console.log("created")
+            this.userdata = JSON.parse(res.data)
+            console.log(this.userdata)
           })
         } else {
           loading.close()
@@ -290,16 +356,20 @@ export default {
     },
 
     OfferInfo() {
-      // 根据输入的报价码查询数据
-      console.log('查询报价码:', this.input);
-      this.isQuerying = true;
       // 这里调用getOffer()
-      const offer = this.getOffer(this.input);
+      //const offer = this.getOffer(this.input);
+      const findOfferFn = this.getOffer(); // 先获取返回的箭头函数
+      const offer = findOfferFn(this.input); // 调用箭头函数并传入报价码获取实际报价
       if (offer) {
-        console.log('查询结果:', offer);
+        console.log('查询结果');
+        // // 动态添加 isEditing 属性
+        offer.isEditing = false;
+        console.log(offer);
+
         // 可以在这里更新界面显示查询结果
         this.$message.success('查找成功');
         this.offerdata = offer;
+        this.isQuerying = true;
       } else {
         this.$message.warning('未找到对应的报价信息');
       }
@@ -308,6 +378,7 @@ export default {
       // 获取所有报价信息
       console.log('获取所有报价信息');
       this.isQuerying = false;
+      this.input=''
       const loading = this.$loading({
         lock: true,
         text: '获取报价中...',
