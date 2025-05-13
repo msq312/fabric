@@ -13,6 +13,7 @@ import (
 // SmartContract 定义合约结构体
 type SmartContract struct {
 	contractapi.Contract
+    idCounter map[string]int // 内存维护各类型ID计数
 }
 
 // RegisterUser 注册用户
@@ -112,9 +113,9 @@ func (s *SmartContract) UserApproveAs(ctx contractapi.TransactionContextInterfac
         UserID:        userId,
 		UserName:          user.UserName,
         ApplyType:     applyType,
-        ApplyTime:     time.Now().Format(customFormat),
+        ApplyTime:     getLocalTime(),
         AuditStatus:   AuditPending,
-        AuditTime:   time.Now().Format(customFormat),
+        AuditTime:   getLocalTime(),
     }
     admin.Applications = append(admin.Applications, application)
 	// 更新用户状态
@@ -165,6 +166,11 @@ func (s *SmartContract) RegisterPlatformAdmin(ctx contractapi.TransactionContext
 	ctx.GetStub().PutState("MatchFrequency", []byte(strconv.Itoa(MatchFrequency)))
 	ctx.GetStub().PutState("DepositRate", []byte(strconv.FormatFloat(DepositRate, 'f', 2, 64)))
 	ctx.GetStub().PutState("FeeRate", []byte(strconv.FormatFloat(FeeRate, 'f', 2, 64)))
+
+    // 初始化所有 ID 序列
+    ctx.GetStub().PutState(BalanceRecordID, []byte("0"))
+    ctx.GetStub().PutState(OfferHistoryID, []byte("0"))
+    ctx.GetStub().PutState(AdminActionID, []byte("0"))
 	return ctx.GetStub().PutState(adminId, adminJSON)
 }
 
@@ -188,7 +194,7 @@ func (s *SmartContract) ApproveUserAs(ctx contractapi.TransactionContextInterfac
     } else {
         app.AuditStatus = AuditRejected
     }
-    app.AuditTime = time.Now().Format(customFormat)
+    app.AuditTime = getLocalTime()
     // 更新用户状态
     user, _ := s.getUser(ctx, app.UserID)
     newStatus := Approved
@@ -212,6 +218,26 @@ func findApplication(apps []*Application, id string) (*Application, int) {
     return nil, -1
 }
 
+// 定义时区变量
+var local *time.Location
+
+func init() {
+    // 初始化时区，加载上海时区（东八区）
+    var err error
+    local, err = time.LoadLocation("Asia/Shanghai")
+    if err != nil {
+        // 若加载失败，使用系统默认时区
+        local = time.Local
+    }
+}
+
+// 获取带时区的当前时间
+func getLocalTime() string {
+    // 使用加载的时区获取当前时间
+    now := time.Now().In(local)
+    // 使用你的自定义格式
+    return now.Format(customFormat) // 示例格式，替换为你的customFormat
+}
 
 
 // AdminModify 管理员修改配置参数
@@ -236,7 +262,7 @@ func (s *SmartContract) AdminModify(ctx contractapi.TransactionContextInterface,
         }
         actionRecord = &AdminActionRecord{
             Action:    "修改撮合频率",
-            Timestamp: time.Now().Format(customFormat),
+            Timestamp: getLocalTime(),
             Details:   fmt.Sprintf("将撮合频率从 %d 修改为 %d", MatchFrequency, i),
         }
         MatchFrequency = i
@@ -248,7 +274,7 @@ func (s *SmartContract) AdminModify(ctx contractapi.TransactionContextInterface,
         }
         actionRecord = &AdminActionRecord{
             Action:    "修改保证金率",
-            Timestamp: time.Now().Format(customFormat),
+            Timestamp: getLocalTime(),
             Details:   fmt.Sprintf("将保证金率从 %.2f 修改为 %.2f", DepositRate, f),
         }
         DepositRate = f
@@ -260,7 +286,7 @@ func (s *SmartContract) AdminModify(ctx contractapi.TransactionContextInterface,
         }
         actionRecord = &AdminActionRecord{
             Action:    "修改手续费率",
-            Timestamp: time.Now().Format(customFormat),
+            Timestamp: getLocalTime(),
             Details:   fmt.Sprintf("将手续费率从 %.2f 修改为 %.2f", FeeRate, f),
         }
         FeeRate = f
@@ -368,23 +394,60 @@ func (s *SmartContract) GetConfig() *Config {
 
 // GetNextID 获取下一个自增 ID
 func (s *SmartContract) GetNextID(ctx contractapi.TransactionContextInterface, key string) (int, error) {
-    idBytes, err := ctx.GetStub().GetState(key)
-    if err != nil {
-        return 0, fmt.Errorf("获取自增 ID 失败: %w", err)
+    // 初始化内存计数器
+    if s.idCounter == nil {
+        s.idCounter = make(map[string]int)
     }
-    var id int
-    if idBytes == nil {
-        id = 1
-    } else {
-        id, err = strconv.Atoi(string(idBytes))
+
+    // 先检查内存中是否有计数
+    if _, exists := s.idCounter[key]; !exists {
+        // 首次访问，从账本加载初始值
+        idBytes, err := ctx.GetStub().GetState(key)
         if err != nil {
-            return 0, fmt.Errorf("解析自增 ID 失败: %w", err)
+            return 0, fmt.Errorf("获取自增 ID 失败: %w", err)
         }
-        id++
+        var initialID int
+        if idBytes == nil {
+            initialID = 1
+        } else {
+            initialID, err = strconv.Atoi(string(idBytes))
+            if err != nil {
+                return 0, fmt.Errorf("解析自增 ID 失败: %w", err)
+            }
+            initialID++ // 账本存储的是上一个值，所以需要+1
+        }
+        s.idCounter[key] = initialID
+    } else {
+        // 内存中已存在，直接递增
+        s.idCounter[key]++
     }
-    newIDBytes := []byte(strconv.Itoa(id))
-    if err := ctx.GetStub().PutState(key, newIDBytes); err != nil {
+
+    // 记录最终值到写集（实际提交时更新账本）
+    finalID := s.idCounter[key]
+    if err := ctx.GetStub().PutState(key, []byte(strconv.Itoa(finalID))); err != nil {
         return 0, fmt.Errorf("更新自增 ID 失败: %w", err)
     }
-    return id, nil
+
+    return finalID, nil
 }
+// func (s *SmartContract) GetNextID(ctx contractapi.TransactionContextInterface, key string) (int, error) {
+//     idBytes, err := ctx.GetStub().GetState(key)
+//     if err != nil {
+//         return 0, fmt.Errorf("获取自增 ID 失败: %w", err)
+//     }
+//     var id int
+//     if idBytes == nil {
+//         id = 1
+//     } else {
+//         id, err = strconv.Atoi(string(idBytes))
+//         if err != nil {
+//             return 0, fmt.Errorf("解析自增 ID 失败: %w", err)
+//         }
+//         id++
+//     }
+//     newIDBytes := []byte(strconv.Itoa(id))
+//     if err := ctx.GetStub().PutState(key, newIDBytes); err != nil {
+//         return 0, fmt.Errorf("更新自增 ID 失败: %w", err)
+//     }
+//     return id, nil
+// }

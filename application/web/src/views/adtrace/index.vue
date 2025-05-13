@@ -20,6 +20,8 @@
                     <el-table-column label="变化量/元" prop="amount" />
                     <el-table-column label="余额/元" prop="rest" />
                     <el-table-column label="变动原因" prop="reason" />
+                    <el-table-column label="来源/去向" prop="userName" />
+                    <el-table-column label="流向" prop="isIncome" :formatter="formatIsIncome"/>
                 </el-table>
             </div>
             <el-button type="primary" style="margin-bottom: 20px; font-size: 40px; font-weight: bold;"
@@ -32,12 +34,19 @@
                 <el-checkbox v-model="filters1.sale" label="售电" />
                 <el-table :data="filteredOffers" style="width: 100%">
                     <el-table-column label="报价码" prop="offerId" />
+                    <el-table-column label="单价/元" prop="offerSnapshot.price" />
+                    <el-table-column label="数量" prop="offerSnapshot.quantity" />
+                    <el-table-column label="类型" prop="offerSnapshot.isSeller" :formatter="formatIsSeller" />
+                    <el-table-column label="创建时间" prop="offerSnapshot.timestamp" />
+                    <el-table-column label="更新时间" prop="offerSnapshot.updatedTime" />
+                    <el-table-column label="操作备注" prop="action" />
+                    <!-- <el-table-column label="报价码" prop="offerId" />
                     <el-table-column label="用户名" prop="userId" />
                     <el-table-column label="单价" prop="price" />
                     <el-table-column label="数量" prop="quantity" />
                     <el-table-column label="类型" prop="isSeller" :formatter="formatIsSeller" />
                     <el-table-column label="操作时间" prop="timestamp" />
-                    <el-table-column label="操作备注" prop="action" />
+                    <el-table-column label="操作备注" prop="action" /> -->
                 </el-table>
             </div>
             <el-button type="primary" style="margin-bottom: 20px; font-size: 40px; font-weight: bold;"
@@ -150,6 +159,9 @@ export default {
 
     // },
     methods: {
+        formatIsIncome(row, column, cellValue) {
+          return cellValue ? '入账' : '出账';
+        },
         offerInfo() {
             this.showoffer = !this.showoffer
             // 电力交易报价溯源信息查询逻辑
@@ -188,28 +200,16 @@ export default {
         },
         fetchContracts() {
             getAllContract().then(res => {
-                const contracts = JSON.parse(res.data);
-                console.log('获取的合同数据:', contracts);
-                Promise.all(contracts.map(contract => {
-                    return Promise.all([
-                        this.getUserInfo(contract.sellerID),
-                        this.getUserInfo(contract.buyerID)
-                    ]).then(([sellerName, buyerName]) => {
-                        return {
-                            ...contract,
-                            sellerName: sellerName,
-                            buyerName: buyerName
-                        };
-                    });
-                })).then(updatedContracts => {
-                    this.contractsdata = updatedContracts;
-                }).catch(err => {
-                    console.error('获取用户信息失败:', err);
-                    this.$message.error('获取用户信息失败');
-                });
+                if (res.code === 200) {
+                    this.contractsdata = JSON.parse(res.data);
+                    console.log(this.contractsdata);
+                    this.$message.success('申请成功');
+                } else {
+                    this.$message.error('申请失败');
+                }
             }).catch(err => {
-                console.error('获取合同信息失败:', err);
-                this.$message.error('获取合同信息失败');
+                console.error(err);
+                this.$message.error('申请失败');
             });
         },
         getAction() {

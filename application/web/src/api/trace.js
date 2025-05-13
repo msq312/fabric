@@ -43,6 +43,17 @@ export function usermodify(data) {
   })
 }
 
+export function userCancel(data) {
+  return request({
+    url: '/userCancel',
+    method: 'post',
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    data
+  })
+}
+
 
 export function userGetAllOffer(data) {
   return request({

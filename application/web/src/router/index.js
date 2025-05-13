@@ -213,23 +213,23 @@ export const adminRoutes = [
   { path: '*', redirect: '/404', hidden: true }
 ]
 
-// 获取当前用户角色，这里假设从 localStorage 中获取
-console.log('当前用户角色:', userRole); // 添加调试信息
-const userRole = localStorage.getItem('userType') || '普通用户';
-// 根据用户角色选择路由配置
-let routes = [];
-if (userRole === '管理员') {
-  routes = adminRoutes;
-} else {
-  routes = userRoutes;
+const createRouter = () => {
+  // 获取当前用户角色，这里假设从 localStorage 中获取
+  const userRole = localStorage.getItem('userType') || '普通用户';
+  console.log('User role from localStorage:', userRole);
+  // 根据用户角色选择路由配置
+  let routes = [];
+  if (userRole === '管理员') {
+    routes = adminRoutes;
+  } else {
+    routes = userRoutes;
+  }
+  return new Router({
+    // mode: 'history', // require service support
+    scrollBehavior: () => ({ y: 0 }),
+    routes: routes
+  });
 }
-console.log('当前加载的路由配置:', routes); // 添加调试信息
-const createRouter = () => new Router({
-  // mode: 'history', // require service support
-  scrollBehavior: () => ({ y: 0 }),
-  routes: routes
-})
-
 const router = createRouter()
 
 // Detail see: https://github.com/vuejs/vue-router/issues/1234#issuecomment-357941465

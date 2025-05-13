@@ -37,15 +37,15 @@ func (s *SmartContract) GetAllOffer(ctx contractapi.TransactionContextInterface,
 		offers = append(offers, offer)
 	}
 
-	for _, offerID := range user.OfferDone {
-		offer, err := s.getOffer(ctx, offerID)
-		if err != nil {
-			// 记录错误但继续处理其他报价
-			fmt.Printf("获取已完成报价 %s 信息失败: %v\n", offerID, err)
-			continue
-		}
-		offers = append(offers, offer)
-	}
+	// for _, offerID := range user.OfferDone {
+	// 	offer, err := s.getOffer(ctx, offerID)
+	// 	if err != nil {
+	// 		// 记录错误但继续处理其他报价
+	// 		fmt.Printf("获取已完成报价 %s 信息失败: %v\n", offerID, err)
+	// 		continue
+	// 	}
+	// 	offers = append(offers, offer)
+	// }
 
 	return offers, nil
 }
@@ -184,22 +184,22 @@ func (s *SmartContract) GetAdminMoneyHistory(ctx contractapi.TransactionContextI
 }
 
 // AdminGetAllOffer 查询系统内所有报价
-func (s *SmartContract) AdminGetAllOffer(ctx contractapi.TransactionContextInterface) ([]*Offer, error) {
+func (s *SmartContract) AdminGetAllOffer(ctx contractapi.TransactionContextInterface) ([]*OfferHistoryRecord, error) {
     // 使用 Offer 复合键前缀直接查询所有报价
-    resultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(OfferPrefix, []string{})
+    resultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(OfferHistoryPrefix, []string{})
     if err != nil {
         return nil, fmt.Errorf("获取所有报价信息失败: %w", err)
     }
     defer resultsIterator.Close()
 
-    var offerList []*Offer
+    var offerList []*OfferHistoryRecord
     for resultsIterator.HasNext() {
         queryResponse, err := resultsIterator.Next()
         if err != nil {
             return nil, fmt.Errorf("迭代报价信息失败: %w", err)
         }
 
-        var offer Offer
+        var offer OfferHistoryRecord
         if err := json.Unmarshal(queryResponse.Value, &offer); err != nil {
             fmt.Printf("解析报价信息失败: %v\n", err)
             continue

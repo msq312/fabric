@@ -122,6 +122,27 @@ func ModifyOffer(c *gin.Context) {
 	})
 
 }
+//用户撤销报价信息
+func CancelOffer(c *gin.Context) {
+	var args []string
+	args = append(args,c.PostForm("userId") ,c.PostForm("offerId"),ADMINID)
+	if args == nil {
+		return
+	}
+	_,err := pkg.ChaincodeInvoke("CancelOffer", args)
+	if err != nil {
+		c.JSON(200, gin.H{
+			"message": "撤销报价失败：" + err.Error(),
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"code":    200,
+		"message": "cancel success",
+		//"data":    res,
+	})
+
+}
 
 // （管理员）获取所有用户正在进行的报价列表
 func GetAllOffers(c *gin.Context) {

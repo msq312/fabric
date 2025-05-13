@@ -1,8 +1,13 @@
 <template>
   <div class="uplink-container">
+     <!-- 添加消息提示区域 -->
+     <div v-if="message" class="notification">
+      {{ message }}
+    </div>
     <div style="margin-bottom: 30px; font-weight: bold; font-size: 40px">
       用户基本信息
     </div>
+    
     <div class="second-row">
       <div class="user-info">
         <div style="color:#909399;margin-bottom: 30px">
@@ -132,7 +137,7 @@
 
 <script>
 import { mapGetters } from 'vuex'
-import { uplink, userApproveAs, userGetAllOffer } from '@/api/trace'
+import { uplink, userApproveAs, userCancel, userGetAllOffer,usermodify } from '@/api/trace'//GetAllOffer
 import { getUserInfo } from '@/api/user'
 
 export default {
@@ -181,7 +186,11 @@ export default {
       filters: {
         purchase: false, // 购电筛选选项
         sale: false // 售电筛选选项
-      }
+      },
+      // 新增：WebSocket相关变量
+      socket: null,
+      message: '',
+      messageType: 'info' // info, success, warning, error
     }
   },
   computed: {
@@ -194,7 +203,7 @@ export default {
       if (this.isQuerying) {
         return [this.offerdata];
       }
-      return this.getAllOffers().filter(item => {
+      return this.AllOffers.filter(item => {
         // 如果两个选项都未勾选，显示所有数据
         if (!this.filters.purchase && !this.filters.sale) return true;
 
@@ -208,46 +217,25 @@ export default {
         return false;
       });
     },
-    // purchaseQualification() {
-    //   if (this.userdata.isBuyer) {
-    //     return '已通过审核';
-    //   } else if (!this.userdata.isBuyer && !this.userdata.approveUserAsBuyer) {
-    //     return '未通过';
-    //   } else if (!this.userdata.isBuyer && this.userdata.approveUserAsBuyer) {
-    //     return '正在申请';
-    //   }
-    //   return '';
-    // },
-    // saleQualification() {
-    //   if (this.userdata.isSeller) {
-    //     return '已通过审核';
-    //   } else if (!this.userdata.isSeller && !this.userdata.approveUserAsSeller) {
-    //     return '未通过';
-    //   } else if (!this.userdata.isSeller && this.userdata.approveUserAsSeller) {
-    //     return '正在申请';
-    //   }
-    //   return '';
-    // },
-
-    // getOffer(){
-    //   //合并userdata的Offers和OfferDone数组，并遍历查找并返回特定的报价码对应的offer
-    //   //return append(this.userdata.Offers,this.userdata.OfferDone...)
-    // }
   },
   created() {
     getUserInfo().then(res => {
       //console.log("created")
       this.userdata = JSON.parse(res.data)
+      this.AllOfferInfo()
       console.log(this.userdata)
-    })
+    }),
+    // 新增：初始化WebSocket连接
+    this.initWebSocket()
+  },
+  beforeDestroy() {
+    // 新增：组件销毁前关闭WebSocket连接
+    this.closeWebSocket()
   },
   methods: {
-    getAllOffers() {
-      return [...this.userdata.offers, ...this.userdata.offerDone];
-    },
     getOffer() {
       return (offerId) => {
-        return this.getAllOffers().find(item => item.offerId === offerId);
+        return this.AllOffers.find(item => item.offerId === offerId);
       };
     },
     // 新增修改报价方法
@@ -256,19 +244,33 @@ export default {
     },
     // 新增提交修改方法
     submitEdit(row) {
+      const loading = this.$loading({
+        lock: true,
+        text: '数据上链中...',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      })
       const formData = new FormData();
       formData.append('offerId', row.offerId);
-      formData.append('newPrice', row.price);
-      formData.append('newQuantity', row.quantity);
+      formData.append('arg1', row.price);
+      formData.append('arg2', row.quantity);
 
-      modifyOffer(formData).then(res => {
+      usermodify(formData).then(res => {
+        loading.close()
         if (res.code === 200) {
           this.$message.success('修改成功');
           row.isEditing = false;
+          getUserInfo().then(res => {
+            //console.log("created")
+            this.userdata = JSON.parse(res.data)
+            //console.log(this.userdata)
+            this.AllOfferInfo()
+          })
         } else {
           this.$message.error('修改失败');
         }
       }).catch(err => {
+        loading.close()
         console.error(err);
         this.$message.error('修改失败');
       });
@@ -276,7 +278,36 @@ export default {
     // 新增撤销报价方法
     cancelOffer(row) {
       console.log('撤销报价');
+      const loading = this.$loading({
+        lock: true,
+        text: '数据上链中...',
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      })
       // 这里可以添加撤销报价的逻辑
+      const formData = new FormData();
+      formData.append('offerId', row.offerId);
+      formData.append('userId', row.userId);
+
+      userCancel(formData).then(res => {
+        loading.close()
+        if (res.code === 200) {
+          this.$message.success('撤销成功');
+          row.isEditing = false;
+          getUserInfo().then(res => {
+            //console.log("created")
+            this.userdata = JSON.parse(res.data)
+            //console.log(this.userdata)
+            this.AllOfferInfo()
+          })
+        } else {
+          this.$message.error('撤销失败');
+        }
+      }).catch(err => {
+        loading.close()
+        console.error(err);
+        this.$message.error('撤销失败');
+      });
     },
     submitofferdata() {
       //console.log(this.userdata)
@@ -310,6 +341,7 @@ export default {
             //console.log("created")
             this.userdata = JSON.parse(res.data)
             console.log(this.userdata)
+            this.AllOfferInfo()
           })
         } else {
           loading.close()
@@ -389,20 +421,121 @@ export default {
       userGetAllOffer().then(res => {
         if (res.code === 200) {
           loading.close()
-          this.AllOffers = JSON.parse(res.data);
-          this.$message.success('申请成功');
+          this.AllOffers = JSON.parse(res.data).map(item => ({
+            ...item,
+            isEditing: false // 确保每一行都有 isEditing 属性
+          }));
+          //this.$message.success('申请成功');
         } else {
           loading.close()
-          this.$message.error('申请失败');
+          //this.$message.error('申请失败');
         }
       }).catch(err => {
         console.error(err);
         loading.close()
-        this.$message.error('申请失败');
+        //this.$message.error('申请失败');
       });
     },
     formatIsSeller(row, column, cellValue) {
       return cellValue ? '售电' : '购电';
+    },
+    // 新增：初始化WebSocket连接
+    initWebSocket() {
+      // 检查浏览器是否支持WebSocket
+      if (!window.WebSocket) {
+        this.showMessage('您的浏览器不支持WebSocket，无法接收实时消息', 'error')
+        return
+      }
+      
+      // 创建WebSocket连接（根据实际域名和端口修改）
+      this.socket = new WebSocket('ws://localhost:8080/ws')
+      
+      // 连接成功回调
+      this.socket.onopen = () => {
+        console.log('WebSocket连接已建立')
+        this.showMessage('已连接到服务器，接收实时报价信息', 'info')
+      }
+      
+      // 接收到消息回调
+      // this.socket.onmessage = (event) => {
+      //   console.log('收到消息:', event.data)
+        
+      //   // 显示消息
+      //   if (event.data.includes("开始")) {
+      //     this.showMessage(event.data, 'info')
+      //   } else if (event.data.includes("完成")) {
+      //     this.showMessage(event.data, 'success')
+      //   } else {
+      //     this.showMessage(event.data, 'info')
+      //   }
+        
+      //   // 如果是撮合完成消息，刷新报价列表
+      //   if (event.data.includes("撮合报价完成")) {
+      //     this.AllOfferInfo()
+      //   }
+      // }
+
+      this.socket.onmessage = (event) => {
+    console.log('收到消息:', event.data)
+
+    // 解析 JSON 数据
+    try {
+        const messageData = JSON.parse(event.data)
+        console.log('解析后的消息:', messageData)
+
+        // 提取需要的信息
+        const messageType = messageData.type || 'info'
+        const message = messageData.message || '未知消息'
+
+        // 显示消息
+        this.showMessage(message, messageType)
+
+        // 如果是撮合完成消息，刷新报价列表
+        if (message.includes("撮合报价完成")) {
+            this.AllOfferInfo()
+        }
+    } catch (error) {
+        console.error('解析消息失败:', error)
+        this.showMessage('收到未知格式的消息', 'warning')
+    }
+}
+      
+      // 连接关闭回调
+      this.socket.onclose = (event) => {
+        console.log('WebSocket连接已关闭:', event)
+        this.showMessage('与服务器的连接已断开，正在尝试重连...', 'warning')
+        
+        // 尝试重连
+        setTimeout(() => {
+          this.initWebSocket()
+        }, 3000)
+      }
+      
+      // 连接错误回调
+      this.socket.onerror = (error) => {
+        console.error('WebSocket错误:', error)
+        this.showMessage('与服务器的连接发生错误', 'error')
+      }
+    },
+    
+    // 新增：关闭WebSocket连接
+    closeWebSocket() {
+      if (this.socket) {
+        this.socket.close()
+        this.socket = null
+      }
+    },
+    
+    // 新增：显示消息提示
+    showMessage(content, type = 'info') {
+      this.message = content
+      this.messageType = type
+      
+      // 3秒后自动隐藏消息
+      clearTimeout(this.messageTimer)
+      this.messageTimer = setTimeout(() => {
+        this.message = ''
+      }, 5000)
     }
   }
 }
@@ -440,5 +573,34 @@ export default {
 
 .search-container {
   margin-top: 30px;
+}
+
+/* 新增：消息提示样式 */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  color: white;
+  transition: all 0.3s ease;
+  
+  &.info {
+    background-color: #409eff;
+  }
+  
+  &.success {
+    background-color: #67c23a;
+  }
+  
+  &.warning {
+    background-color: #e6a23c;
+  }
+  
+  &.error {
+    background-color: #f56c6c;
+  }
 }
 </style>

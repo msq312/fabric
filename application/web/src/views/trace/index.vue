@@ -10,11 +10,12 @@
               <el-checkbox style="margin-left: 10px;" v-model="filters1.purchase" label="购电" />
               <el-checkbox v-model="filters1.sale" label="售电" />
               <el-table :data="filteredOffers" style="width: 100%">
-                  <el-table-column label="报价码" prop="offer.offerId" />
-                  <el-table-column label="单价/元" prop="offer.price" />
-                  <el-table-column label="数量" prop="offer.quantity" />
-                  <el-table-column label="类型" prop="offer.isSeller" :formatter="formatIsSeller" />
-                  <el-table-column label="操作时间" prop="timestamp" />
+                  <el-table-column label="报价码" prop="offerId" />
+                  <el-table-column label="单价/元" prop="offerSnapshot.price" />
+                  <el-table-column label="数量" prop="offerSnapshot.quantity" />
+                  <el-table-column label="类型" prop="offerSnapshot.isSeller" :formatter="formatIsSeller" />
+                  <el-table-column label="创建时间" prop="offerSnapshot.timestamp" />
+                  <el-table-column label="更新时间" prop="offerSnapshot.updatedTime" />
                   <el-table-column label="操作备注" prop="action" />
               </el-table>
           </div>
@@ -28,8 +29,8 @@
               <el-checkbox v-model="filters2.sale" label="售电" />
               <el-table :data="filteredContracts" style="width: 100%">
                   <el-table-column label="合同编号" prop="contractId" />
-                  <el-table-column label="售电方" prop="sellerId" />
-                  <el-table-column label="购电方" prop="buyerId" />
+                  <el-table-column label="售电方" prop="sellerName" />
+                  <el-table-column label="购电方" prop="buyerName" />
                   <el-table-column label="电力单价" prop="price" />
                   <el-table-column label="交易电量" prop="quantity" />
                   <el-table-column label="交易时间" prop="timestamp" />
@@ -45,6 +46,8 @@
                   <el-table-column label="变化量" prop="amount" />
                   <el-table-column label="余额" prop="rest" />
                   <el-table-column label="变动原因" prop="reason" />
+                  <el-table-column label="来源/去向" prop="userName" />
+                  <el-table-column label="流向" prop="isIncome" :formatter="formatIsIncome"/>
               </el-table>
           </div>
           <el-button type="primary" style="margin-bottom: 20px; font-size: 40px; font-weight: bold;"
@@ -125,7 +128,7 @@ export default {
           });
       },
       filteredBalances() {
-          return this.balancehistorydata().filter(item => {
+          return this.balancehistorydata.filter(item => {
               // 如果两个选项都未勾选，显示所有数据
               if (!this.filters3.out && !this.filters3.in) return true;
               if (this.filters3.out && item.amount < 0) return true;
@@ -185,6 +188,9 @@ export default {
       formatIsSeller(row, column, cellValue) {
           return cellValue ? '售电' : '购电';
       },
+      formatIsIncome(row, column, cellValue) {
+          return cellValue ? '入账' : '出账';
+      },
       fetchContracts() {
           getUserContracts().then(res => {
               const contracts = JSON.parse(res.data);
@@ -216,7 +222,8 @@ export default {
           getAdminActionHistory().then(res => {
               if (res.code === 200) {
                   this.adminActiondata = JSON.parse(res.data);
-                  this.$message.success('申请成功');
+                  //this.$message.success('申请成功');
+                  console.log(this.adminActiondata)
               } else {
                   this.$message.error('申请失败');
               }
@@ -288,7 +295,7 @@ export default {
           getBalanceHistory().then(res => {
               if (res.code === 200) {
                   this.balancehistorydata = JSON.parse(res.data);
-                  this.$message.success('申请成功');
+                  console.log(this.balancehistorydata)
               } else {
                   this.$message.error('申请失败');
               }

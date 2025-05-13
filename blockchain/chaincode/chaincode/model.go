@@ -76,6 +76,13 @@ type Offer struct {
 	Status    OfferStatus  `json:"status"`    // 报价状态
 	Round     int     `json:"round"`     // 撮合轮数
 }
+// OfferHistoryRecord 报价历史记录
+type OfferHistoryRecord struct {
+	OfferID     string  `json:"offerId"`
+	//Timestamp   string  `json:"timestamp"`
+	Action      string  `json:"action"` // 提交，修改，更新，完成，撤销
+	OfferSnapshot Offer  `json:"offerSnapshot"` // 存储操作时的报价快照
+}
 type ContractStatus string
 const (
     ContractCreated  ContractStatus = "created"
@@ -109,13 +116,7 @@ type BalanceRecord struct {
 	UserName  string  `json:"userName"`
 }
 
-// OfferHistoryRecord 报价历史记录
-type OfferHistoryRecord struct {
-	OfferID     string  `json:"offerId"`
-	//Timestamp   string  `json:"timestamp"`
-	Action      string  `json:"action"` // 提交，修改，更新，完成，撤销
-	OfferSnapshot Offer  `json:"offerSnapshot"` // 存储操作时的报价快照
-}
+
 
 // PlatformAdmin 表示平台管理员
 type PlatformAdmin struct {

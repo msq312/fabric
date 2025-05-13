@@ -17,6 +17,7 @@ services:
     volumes:
       - ./docker/peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro  # 添加这一行
 
   peer0.org2.example.com:
     container_name: peer0.org2.example.com
@@ -30,9 +31,11 @@ services:
     volumes:
       - ./docker/peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro  # 添加这一行
   
   cli:
     container_name: cli
     image: hyperledger/fabric-tools:latest
     volumes:
       - ./docker/peercfg:/etc/hyperledger/peercfg
+      - /etc/localtime:/etc/localtime:ro  # 添加这一行

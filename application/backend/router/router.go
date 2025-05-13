@@ -55,6 +55,8 @@ func SetupRouter() *gin.Engine {
 	r.POST("/uplink", middleware.JWTAuthMiddleware(), con.Uplink)
 	//用户修改报价
 	r.POST("/usermodify", middleware.JWTAuthMiddleware(), con.ModifyOffer)
+	r.POST("/userCancel", middleware.JWTAuthMiddleware(), con.CancelOffer)
+
 	//用户获取所有的报价信息
 	r.POST("/userGetAllOffer", middleware.JWTAuthMiddleware(), con.GetAllOffer)
 	//（管理员）获取所有用户正在进行的报价列表

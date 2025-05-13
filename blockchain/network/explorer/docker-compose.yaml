@@ -28,6 +28,7 @@ services:
       retries: 5
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro  # 添加这一行
     networks:
       - mynetwork.com
 
@@ -52,6 +53,7 @@ services:
       - ${EXPLORER_PROFILE_DIR_PATH}:/opt/explorer/app/platform/fabric/connection-profile
       - ${FABRIC_CRYPTO_PATH}:/tmp/crypto
       - walletstore:/opt/explorer/wallet
+      - /etc/localtime:/etc/localtime:ro  # 添加这一行
     ports:
       - ${PORT:-8080}:${PORT:-8080}
     depends_on:
