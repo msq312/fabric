@@ -13,7 +13,7 @@ import (
 )
 
 // SubmitOffer 提交报价
-func (s *SmartContract) SubmitOffer(ctx contractapi.TransactionContextInterface, userId string, offerId string, price float64, quantity int, isSeller bool, adminId string) (*Offer, error) {
+func (s *SmartContract) SubmitOffer(ctx contractapi.TransactionContextInterface, userId string, offerId string, price float64, quantity int, isSeller bool, startTime string, endTime string, adminId string) (*Offer, error) {
 	fmt.Println("into submitoffer")
 	// 获取用户信息
 	user, err := s.getUser(ctx, userId)
@@ -86,6 +86,8 @@ func (s *SmartContract) SubmitOffer(ctx contractapi.TransactionContextInterface,
 		UpdatedTime: getLocalTime(),
 		Status:     OfferPending,
 		Round:      1,
+		TransactionStartTime: startTime,
+        TransactionEndTime:   endTime,
 	}
 	fmt.Println("创建offer")
 	// 存储报价信息
@@ -112,7 +114,7 @@ func (s *SmartContract) SubmitOffer(ctx contractapi.TransactionContextInterface,
 func (s *SmartContract) MatchOffers(ctx contractapi.TransactionContextInterface, adminId string) error {
 	fmt.Println("into matchoffer")
 	// 获取所有状态为“待撮合”的报价
-	sellerOffers, buyerOffers, err := s.getPendingOffers(ctx)
+	sellerOffers, buyerOffers, err := s.getPendingOffers(ctx,adminId)
 	if err != nil {
 		fmt.Println("获取待撮合报价失败:", err)
 		return fmt.Errorf("获取待撮合报价失败: %w", err)
@@ -168,6 +170,13 @@ func (s *SmartContract) MatchOffers(ctx contractapi.TransactionContextInterface,
 			}
 			continue
 		}
+		 // 检查交易时间范围是否有交集
+		 if sellerOffer.TransactionStartTime > buyerOffer.TransactionEndTime || buyerOffer.TransactionStartTime > sellerOffer.TransactionEndTime {
+            // 时间范围无交集，跳过当前买方报价
+            buyerOffers = buyerOffers[1:]
+            continue
+        }
+
 
 		// 价格匹配检查
 		if buyerOffer.Price >= sellerOffer.Price {
@@ -204,7 +213,7 @@ func (s *SmartContract) MatchOffers(ctx contractapi.TransactionContextInterface,
 }
 
 // getPendingOffers 获取所有待撮合的报价
-func (s *SmartContract) getPendingOffers(ctx contractapi.TransactionContextInterface) ([]*Offer, []*Offer, error) {
+func (s *SmartContract) getPendingOffers(ctx contractapi.TransactionContextInterface,adminId string) ([]*Offer, []*Offer, error) {
 	fmt.Println("into getPendingOffers")
 	// 获取所有报价
 	resultsIterator, err := ctx.GetStub().GetStateByPartialCompositeKey(OfferPrefix, []string{})
@@ -215,7 +224,7 @@ func (s *SmartContract) getPendingOffers(ctx contractapi.TransactionContextInter
 
 	var sellerOffers []*Offer
 	var buyerOffers []*Offer
-
+	now := getLocalTime()
 	// 遍历所有报价，筛选出待撮合的报价
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
@@ -231,6 +240,20 @@ func (s *SmartContract) getPendingOffers(ctx contractapi.TransactionContextInter
 		if offer.Status != OfferPending {
 			continue
 		}
+		// **新增：检查交易时间是否过期**
+		if offer.TransactionStartTime > now || offer.TransactionEndTime < now {
+			// 调用退还保证金函数
+			if err := s.refundExpiredOfferDeposit(ctx, &offer,adminId); err != nil {
+				return nil, nil, err
+			}
+			// 更新报价状态为已过期
+			offer.Status = OfferExpired
+			if err := s.saveOffer(ctx, &offer); err != nil { // 保存状态变更到账本
+				return nil, nil, err
+			}
+			continue // 跳过已过期的报价，不加入待撮合列表
+		}
+
 		if offer.IsSeller {
 			sellerOffers = append(sellerOffers, &offer)
 		} else {
@@ -239,6 +262,63 @@ func (s *SmartContract) getPendingOffers(ctx contractapi.TransactionContextInter
 	}
 
 	return sellerOffers, buyerOffers, nil
+}
+
+// refundExpiredOfferDeposit 处理过期报价的保证金退还
+func (s *SmartContract) refundExpiredOfferDeposit(ctx contractapi.TransactionContextInterface, offer *Offer,adminId string) error {
+	fmt.Println("refunding expired offer deposit:", offer.OfferID)
+
+	// 获取用户信息
+	user, err := s.getUser(ctx, offer.UserID)
+	if err != nil {
+		return fmt.Errorf("获取用户信息失败: %w", err)
+	}
+
+	// 获取管理员信息
+	admin, err := s.getAdmin(ctx, adminId) // 假设管理员ID固定为常量，或从参数传入
+	if err != nil {
+		return fmt.Errorf("获取管理员信息失败: %w", err)
+	}
+
+	// **仅买方需要退还保证金**（卖方可能无需保证金，或根据业务逻辑调整）
+	if !offer.IsSeller {
+		refundAmount := offer.Deposit // 全额退还过期报价的保证金
+
+		// 更新用户余额：增加保证金
+		user.Balance += refundAmount
+		// 记录用户余额变动
+		key, err := s.recordBalanceChange(ctx, user.UserID, refundAmount, user.Balance, 
+			fmt.Sprintf("退还过期报价%s保证金", offer.OfferID), true, admin.AdminID, false)
+		if err != nil {
+			return err
+		}
+		user.BalanceHistory = append(user.BalanceHistory, key)
+
+		// 更新管理员余额：扣除保证金
+		admin.Balance -= refundAmount
+		// 记录管理员余额变动
+		key, err = s.recordBalanceChange(ctx, admin.AdminID, -refundAmount, admin.Balance, 
+			fmt.Sprintf("退还过期报价%s保证金", offer.OfferID), false, user.UserName, true)
+		if err != nil {
+			return err
+		}
+		admin.BalanceHistory = append(admin.BalanceHistory, key)
+
+		// 保存用户和管理员状态
+		if err := s.updateUser(ctx, user); err != nil {
+			return err
+		}
+		if err := s.updateAdmin(ctx, admin); err != nil {
+			return err
+		}
+
+		// 记录报价历史：标记为过期
+		if err := s.recordOfferHistory(ctx, offer, "过期", user); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // createContract 创建合同
@@ -506,6 +586,7 @@ func (s *SmartContract) SettleContract(ctx contractapi.TransactionContextInterfa
 			return err
 		}
 		buyerUser.BalanceHistory = append(buyerUser.BalanceHistory, key)
+		buyerUser.TradeCount+=1
 
 		// 卖方收款（扣除手续费）
 		sellerUser.Balance += totalAmount - fee
@@ -514,6 +595,7 @@ func (s *SmartContract) SettleContract(ctx contractapi.TransactionContextInterfa
 			return err
 		}
 		sellerUser.BalanceHistory = append(sellerUser.BalanceHistory, key)
+		sellerUser.TradeCount+=1
 
 		// 平台收取手续费
 		admin.Balance += fee
@@ -559,7 +641,7 @@ func (s *SmartContract) SettleContract(ctx contractapi.TransactionContextInterfa
 }
 
 // ModifyOffer 修改报价信息
-func (s *SmartContract) ModifyOffer(ctx contractapi.TransactionContextInterface, userId string, offerId string, newPrice float64, newQuantity int, adminId string) error {
+func (s *SmartContract) ModifyOffer(ctx contractapi.TransactionContextInterface, userId string, offerId string, newPrice float64, newQuantity int,newStartTime string, newEndTime string, adminId string) error {
 	// 获取完整的Offer信息
 	offer, err := s.getOffer(ctx, offerId)
 	if err != nil {
@@ -683,6 +765,8 @@ func (s *SmartContract) ModifyOffer(ctx contractapi.TransactionContextInterface,
 	offer.Status = OfferPending
 	offer.Round += 1
 	offer.UpdatedTime = getLocalTime()
+	offer.TransactionStartTime = newStartTime
+    offer.TransactionEndTime = newEndTime
 
 	// 创建报价修改历史记录
 	if err := s.recordOfferHistory(ctx, offer, "修改",user); err != nil {

@@ -61,6 +61,7 @@ const (
     OfferPending   OfferStatus = "待撮合"
     OfferMatched   OfferStatus = "已撮合"
     OfferCancelled OfferStatus = "已取消"   //提交，修改，更新，完成，撤销
+	OfferExpired OfferStatus = "已过期" // 报价过期
 )
 // Offer 表示报价信息
 type Offer struct {
@@ -75,6 +76,8 @@ type Offer struct {
     UpdatedTime string      `json:"updatedTime"` // 更新时间
 	Status    OfferStatus  `json:"status"`    // 报价状态
 	Round     int     `json:"round"`     // 撮合轮数
+	TransactionStartTime string       `json:"transactionStartTime"` // 交易开始时间
+    TransactionEndTime   string       `json:"transactionEndTime"`   // 交易结束时间
 }
 // OfferHistoryRecord 报价历史记录
 type OfferHistoryRecord struct {

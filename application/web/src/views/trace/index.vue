@@ -109,9 +109,9 @@ export default {
               // 如果两个选项都未勾选，显示所有数据
               if (!this.filters1.purchase && !this.filters1.sale) return true;
               // 如果勾选了购电，筛选类型为“购电”的数据
-              if (this.filters1.purchase && !item.isSeller) return true;
+              if (this.filters1.purchase && !item.offerSnapshot.isSeller) return true;
               // 如果勾选了售电，筛选类型为“售电”的数据
-              if (this.filters1.sale && item.isSeller) return true;
+              if (this.filters1.sale && item.offerSnapshot.isSeller) return true;
               // 其他情况不显示
               return false;
           });

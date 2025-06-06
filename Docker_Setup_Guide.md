@@ -1,10 +1,9 @@
 ## Docker版部署fabric-trace步骤
 > 相较于主要的部署方式，不需要安装nvm，且使用docker部署项目更加方便管理
 
-强烈推荐按照步骤使用云服务器搭建本系统，虚拟机的问题较多。点击此链接直达新人活动页面：[https://curl.qcloud.com/Sjy0zKjy](https://curl.qcloud.com/Sjy0zKjy) 点击首单特惠，**购买2核4G或以上的服务器**，199/年（价格经常会调整），如果后续准备做程序开发可以用新用户优惠买三年的，安装Ubuntu20.04系统。
 
-**严格按照以下步骤操作，以下步骤已经经过上百人次的验证，如果遇到报错请仔细检查是否遗漏某个步骤。
-如果对Linux命令不熟悉，请一定先学习下：[快速入门Linux及使用VSCode远程连接Linux服务器](https://blog.csdn.net/qq_41575489/article/details/139434933)，遇到报错后一定不能跳过，解决完再往下一步！**
+
+
 
 1. 安装docker 
 
@@ -98,31 +97,9 @@
     ```bash
     ./stop_docker.sh
     ```
-8. 在腾讯云轻量应用服务器防火墙页面，放行TCP端口`8080,9090,9528`
-![防火墙配置](https://truetechlabs-1259203851.cos.ap-shanghai.myqcloud.com/picgo202404151240899.png)
-9. 在浏览器中打开：http://云服务器IP:9090 即可看到前端页面。
-10. 使用tape对项目进行压力测试
-根据blockchain/chaincode/chaincode/smartcontract.go中的合约函数的签名，编写压测的参数，需要修改的内容是tape目录下的yaml文件中的args。args第一个参数是函数名，后面的参数是函数的参数。例如：
-    ```yaml
-    args:
-    # 函数名
-    - RegisterUser
-    # userID string
-    - 1
-    #userType string
-    - randomString8
-    # realInfoHash string
-    - randomString8
-    ```
-执行`./tape --config config_register.yaml -n 1`即可完成用户1的注册，然后可以对农产品上链操作与获取用户信息函数进行压测。更多的压测案例可以根据合约函数的签名进行修改。
-附农产品上链操作与获取用户信息函数进行压测操作指令：
 
-```bash
-./tape --config config_invoke.yaml -n 100
-./tape --config config_query.yaml -n 100
-```
 
-11. 关闭项目
+7. 关闭项目
 
 
     ```bash

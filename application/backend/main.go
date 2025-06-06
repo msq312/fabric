@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 	"time"
-
+	"encoding/json"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
@@ -18,12 +18,12 @@ import (
 // WebSocket 配置
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
-	WriteBufferSize:  1024,
+	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 var clients = make(map[*websocket.Conn]bool)
-var broadcast = make(chan string)
+var broadcast = make(chan string) // 保持为字符串类型
 
 // 处理 WebSocket 连接
 func handleConnections(w http.ResponseWriter, r *http.Request) {
@@ -54,15 +54,15 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 // 向所有客户端广播消息
 func handleMessages() {
 	for msg := range broadcast {
-		for client := range clients {
-			err := client.WriteMessage(websocket.TextMessage, []byte(msg))
-			if err != nil {
-				log.Printf("发送消息失败: %v", err)
-				client.Close()
-				delete(clients, client)
-			}
-		}
-	}
+        for client := range clients {
+            err := client.WriteMessage(websocket.TextMessage, []byte(msg))
+            if err != nil {
+                log.Printf("发送消息失败: %v", err)
+                client.Close()
+                delete(clients, client)
+            }
+        }
+    }
 }
 
 // 发送当前状态和下一次执行时间
@@ -93,45 +93,39 @@ func calculateNextExecutionTime() time.Time {
 	return nextTime.Truncate(time.Minute)
 }
 
-// func periodicTask() {
-// 	// 发送开始消息和下次执行时间
-// 	nextTime := calculateNextExecutionTime()
-// 	startMsg := fmt.Sprintf("撮合报价开始 (下次将于 %s 执行)", nextTime.Format("15:04:05"))
-// 	broadcast <- startMsg
-// 	log.Println("Periodic task started at", time.Now())
-	
-// 	// 执行核心逻辑
-// 	result := con.ExecutePowerMatching()
-// 	log.Println("Matching result:", result)
-	
-// 	// 发送结束消息和下次执行时间
-// 	nextTime = calculateNextExecutionTime() // 重新计算
-// 	endMsg := fmt.Sprintf("撮合报价完成 ✅ 结果: %v (下次将于 %s 执行)", result, nextTime.Format("15:04:05"))
-// 	broadcast <- endMsg
-// }
-
+// 定时任务逻辑
 func periodicTask() {
-    // 发送开始消息和下次执行时间
-    nextTime := calculateNextExecutionTime()
-    startMsg := map[string]interface{}{
-        "type":    "info",
-        "message": fmt.Sprintf("撮合报价开始 (下次将于 %s 执行)", nextTime.Format("15:04:05")),
-    }
-    broadcast <- startMsg
+	// 发送开始消息和下次执行时间
+	nextTime := calculateNextExecutionTime()
+	startMsg := map[string]interface{}{
+		"type":    "info",
+		"message": fmt.Sprintf("撮合报价开始 (下次将于 %s 执行)", nextTime.Format("15:04:05")),
+	}
+	startMsgJSON, err := json.Marshal(startMsg)
+	if err != nil {
+		log.Printf("序列化开始消息失败: %v", err)
+		return
+	}
+	broadcast <- string(startMsgJSON)
 
-    log.Println("Periodic task started at", time.Now())
+	log.Println("Periodic task started at", time.Now())
 
-    // 执行核心逻辑
-    result := con.ExecutePowerMatching()
-    log.Println("Matching result:", result)
+	// 执行核心逻辑
+	result := con.ExecutePowerMatching()
+	log.Println("Matching result:", result)
 
-    // 发送结束消息和下次执行时间
-    nextTime = calculateNextExecutionTime() // 重新计算
-    endMsg := map[string]interface{}{
-        "type":    "success",
-        "message": fmt.Sprintf("撮合报价完成 ✅ 结果: %v (下次将于 %s 执行)", result, nextTime.Format("15:04:05")),
-    }
-    broadcast <- endMsg
+	// 发送结束消息和下次执行时间
+	nextTime = calculateNextExecutionTime() // 重新计算
+	endMsg := map[string]interface{}{
+		"type":    "success",
+		"message": fmt.Sprintf("撮合报价完成 ✅ 结果: %v (下次将于 %s 执行)", result, nextTime.Format("15:04:05")),
+	}
+	endMsgJSON, err := json.Marshal(endMsg)
+	if err != nil {
+		log.Printf("序列化结束消息失败: %v", err)
+		return
+	}
+	broadcast <- string(endMsgJSON)
 }
 
 func main() {
@@ -150,7 +144,7 @@ func main() {
 	if err := con.RegisterAdmin(&model.MysqlUser{
 		Username: "admin",
 		Password: "123",
-        UserType: "管理员",
+		UserType: "管理员",
 	}); err != nil {
 		log.Println("注册管理员账户失败:", err)
 	} else {

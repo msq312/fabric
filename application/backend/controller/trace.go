@@ -344,9 +344,14 @@ func buildArgs(c *gin.Context,offerId string,create bool) []string {
 		args = append(args, c.PostForm("arg1"))
 		args = append(args, c.PostForm("arg2"))
 		args = append(args, c.PostForm("arg3"))
+		args = append(args, c.PostForm("arg4"))
+		args = append(args, c.PostForm("arg5"))
+
 	}else{
 		args = append(args, c.PostForm("arg1"))
 		args = append(args, c.PostForm("arg2"))
+		args = append(args, c.PostForm("arg3"))
+		args = append(args, c.PostForm("arg4"))
 	}
 	
 	//args = append(args, c.PostForm("arg4"))

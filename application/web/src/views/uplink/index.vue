@@ -1,9 +1,9 @@
 <template>
   <div class="uplink-container">
      <!-- 添加消息提示区域 -->
-     <div v-if="message" class="notification">
+     <!-- <div v-if="message" class="notification">
       {{ message }}
-    </div>
+    </div> -->
     <div style="margin-bottom: 30px; font-weight: bold; font-size: 40px">
       用户基本信息
     </div>
@@ -54,6 +54,10 @@
               <td style=" padding-right: 10px;">账户余额：</td>
               <td>{{ userdata.balance.toFixed(2) }}/元</td>
             </tr>
+            <tr>
+              <td style=" padding-right: 10px;">交易次数：</td>
+              <td>{{ userdata.tradeCount }}/次</td>
+            </tr>
           </table>
         </div>
       </div>
@@ -64,23 +68,44 @@
 
             <div v-show="userType == '普通用户'">
               <el-form-item label="报价:" style="width: 300px" label-width="120px">
-                <el-input v-model="offerdata.price" />
+                <el-input v-model="offerdata.price" style="display: inline-block; width: calc(100% - 30px);"/>
+                <span style="margin-left: 5px;">元</span>
               </el-form-item>
               <el-form-item label="数量:" style="width: 300px" label-width="120px">
-                <el-input v-model="offerdata.quantity" />
+                <el-input v-model="offerdata.quantity" style="display: inline-block; width: calc(100% - 50px);"/>
+                <span style="margin-left: 5px; display: inline-block;">kwh</span>
               </el-form-item>
               <el-form-item label="类型:" style="width: 300px" label-width="120px">
                 <el-select v-model="offerdata.isSeller" placeholder="请选择报价类型">
                   <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </el-form-item>
-        
+              <el-form-item label="开始时间:" style="width: 300px" label-width="120px">
+                <el-date-picker
+                  v-model="offerdata.transactionStartTime"
+                  type="datetime"
+                  fue-format="yyyy-MM-dd HH:mm:ss"  
+                  value-format="yyyy-MM-dd HH:mm:ss"  
+                  placeholder="请选择交易开始时间">
+                </el-date-picker>
+              </el-form-item>
+              <el-form-item label="结束时间:" style="width: 300px" label-width="120px">
+                <el-date-picker
+                  v-model="offerdata.transactionEndTime"
+                  type="datetime"
+                  format="yyyy-MM-dd HH:mm:ss" 
+                  value-format="yyyy-MM-dd HH:mm:ss"  
+                  placeholder="请选择交易结束时间">
+                </el-date-picker>
+              </el-form-item>
             </div>
 
           </el-form>
           <span slot="footer" style="color: gray;" class="dialog-footer">
             <el-button v-show="(userdata.isSeller==='已通过' && offerdata.isSeller) || (userdata.isBuyer==='已通过' && !(offerdata.isSeller))"
               type="primary" plain style="margin-left: 220px;" @click="submitofferdata()">提 交</el-button>
+            <el-button v-show="(userdata.isSeller==='已通过' && offerdata.isSeller) || (userdata.isBuyer==='已通过' && !(offerdata.isSeller))"
+              type="default" plain style="margin-left: 10px;" @click="cancelOfferData()">取 消</el-button>
           </span>
           <span v-show="!((userdata.isSeller==='已通过' && offerdata.isSeller) || (userdata.isBuyer==='已通过' && !(offerdata.isSeller)))"
             slot="footer" style="color: gray;" class="dialog-footer">
@@ -89,7 +114,14 @@
         </div>
       </div>
     </div>
-    <div class="search-container">
+    <el-tabs v-model="activeTab">
+        <el-tab-pane label="报价检索" name="search"></el-tab-pane>
+        <el-tab-pane label="报价信息统计" name="statistics"></el-tab-pane>
+    </el-tabs>
+    <div v-if="activeTab === 'search'">
+        
+    
+      <!-- <div class="search-container"> -->
       <el-input v-model="input" placeholder="请输入报价码查询" style="width: 300px;margin-right: 15px;" />
       <el-button type="primary" plain @click="OfferInfo"> 查询 </el-button>
       <el-button type="success" plain @click="AllOfferInfo"> 获取所有报价信息 </el-button>
@@ -115,6 +147,18 @@
             <span v-else>{{ scope.row.quantity }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="交易开始时间">
+          <template #default="scope">
+            <el-input v-if="scope.row.isEditing" v-model="scope.row.transactionStartTime" />
+            <span v-else>{{ scope.row.transactionStartTime }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="交易结束时间">
+          <template #default="scope">
+            <el-input v-if="scope.row.isEditing" v-model="scope.row.transactionEndTime" />
+            <span v-else>{{ scope.row.transactionEndTime }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="押金" prop="deposit" />
         <el-table-column label="创建时间" prop="timestamp" />
         <el-table-column label="更新时间" prop="updatedTime" />
@@ -131,12 +175,33 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        :current-page="currentPage"
+        :page-sizes="[10, 20, 30, 50]"
+        :page-size="pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="totalCount"
+      />
+    </div>
+    <div v-if="activeTab === 'statistics'">
+      <!-- 统计信息显示 -->
+      <div>
+        <p>购电报价数量：{{ purchaseOffersCount }}</p>
+        <p>售电报价数量：{{ saleOffersCount }}</p>
+        <!-- 其他统计信息 -->
+      </div>
+      <div class="chart-container">
+        <div ref="pieChart" style="width: 600px; height: 400px;"></div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
+import * as echarts from 'echarts';
 import { uplink, userApproveAs, userCancel, userGetAllOffer,usermodify } from '@/api/trace'//GetAllOffer
 import { getUserInfo } from '@/api/user'
 
@@ -157,6 +222,7 @@ export default {
         offerDone: [],
         creditRating:0,
         tradeCount:0,
+        
       },
       offerdata: {
         offerId: '',
@@ -170,6 +236,8 @@ export default {
         updateTime: '',
         status: '',
         round: 0,
+        transactionStartTime: '',
+        transactionEndTime: '',
         isEditing: false,
       },
       isQuerying: false,
@@ -190,7 +258,16 @@ export default {
       // 新增：WebSocket相关变量
       socket: null,
       message: '',
-      messageType: 'info' // info, success, warning, error
+      messageType: 'info' ,// info, success, warning, error
+      activeTab: 'search' ,// 默认选中的标签
+      purchaseOffersCount: 0, // 购电报价数量
+      saleOffersCount: 0, // 售电报价数量
+      currentPage: 1, // 当前页码
+      pageSize: 10, // 每页显示数量
+      totalCount: 0, // 总记录数
+      pendingOffersCount: 0, // 待撮合报价数量
+      matchedOffersCount: 0, // 已完成报价数量
+      cancelledOffersCount: 0, // 已撤销报价数量
     }
   },
   computed: {
@@ -232,7 +309,76 @@ export default {
     // 新增：组件销毁前关闭WebSocket连接
     this.closeWebSocket()
   },
+  mounted() {
+  this.$nextTick(() => {
+    if (this.$refs.pieChart) {
+      this.initPieChart();
+      this.AllOfferInfo();
+    } else {
+      console.error('DOM element not found in mounted hook');
+    }
+  });
+},
+watch: {
+  // 监听可能影响图表的数据变化
+  AllOffers: {
+    handler() {
+      this.initOrUpdateChart();
+    },
+    deep: true
+  }
+},
+  
   methods: {
+    initOrUpdateChart() {
+    if (this.$refs.pieChart) {
+      this.initPieChart();
+    } else {
+      console.warn('Chart container not found, will retry');
+    }
+  },
+    initPieChart() {
+    const chartDom = this.$refs.pieChart;
+    if (!chartDom) {
+      console.error('DOM element not found');
+      return;
+    }
+    const myChart = echarts.init(chartDom);
+    const option = {
+      title: {
+        text: '报价状态分布',
+        left: 'center'
+      },
+      tooltip: {
+        trigger: 'item'
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left'
+      },
+      series: [
+        {
+          name: '报价状态',
+          type: 'pie',
+          radius: '50%',
+          data: [
+            { value: this.pendingOffersCount, name: '待撮合' },
+            { value: this.matchedOffersCount, name: '已完成' },
+            { value: this.cancelledOffersCount, name: '已撤销' },
+            // 根据需要添加更多状态
+          ],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          }
+        }
+      ]
+    };
+    myChart.setOption(option);
+  },
     getOffer() {
       return (offerId) => {
         return this.AllOffers.find(item => item.offerId === offerId);
@@ -254,6 +400,8 @@ export default {
       formData.append('offerId', row.offerId);
       formData.append('arg1', row.price);
       formData.append('arg2', row.quantity);
+      formData.append('arg3', row.transactionStartTime); // 新增开始时间
+      formData.append('arg4', row.transactionEndTime); // 新增结束时间
 
       usermodify(formData).then(res => {
         loading.close()
@@ -324,6 +472,8 @@ export default {
       formData.append('arg1', this.offerdata.price)
       formData.append('arg2', this.offerdata.quantity)
       formData.append('arg3', this.offerdata.isSeller)
+      formData.append('arg4', this.offerdata.transactionStartTime) // 新增开始时间
+      formData.append('arg5', this.offerdata.transactionEndTime) // 新增结束时间
 
       uplink(formData).then(res => {
         if (res.code === 200) {
@@ -426,6 +576,9 @@ export default {
             isEditing: false // 确保每一行都有 isEditing 属性
           }));
           //this.$message.success('申请成功');
+          this.totalCount = this.AllOffers.length; // 更新总记录数
+          this.calculateStatistics(); // 计算统计信息
+          this.fetchData(); // 获取第一页数据
         } else {
           loading.close()
           //this.$message.error('申请失败');
@@ -439,6 +592,52 @@ export default {
     formatIsSeller(row, column, cellValue) {
       return cellValue ? '售电' : '购电';
     },
+    handleCurrentChange(page) {
+    this.currentPage = page;
+    this.fetchData(); // 重新获取数据
+  },
+  handleSizeChange(size) {
+    this.pageSize = size;
+    this.currentPage = 1; // 切换每页数量后重置到第一页
+    this.fetchData(); // 重新获取数据
+  },
+  fetchData() {
+    // 模拟从后端获取数据
+    const start = (this.currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    this.filteredOfferData = this.AllOffers.slice(start, end);
+  },
+    calculateStatistics() {
+      this.purchaseOffersCount = this.AllOffers.filter(item => !item.isSeller).length;
+      this.saleOffersCount = this.AllOffers.filter(item => item.isSeller).length;
+      this.pendingOffersCount = this.AllOffers.filter(item => item.status === '待撮合').length;
+      this.matchedOffersCount = this.AllOffers.filter(item => item.status === '已撮合').length;
+      this.cancelledOffersCount = this.AllOffers.filter(item => item.status === '已取消').length;
+      // 新增：根据时间范围过滤报价
+      const currentTime = new Date();
+      this.activeOffersCount = this.AllOffers.filter(item => {
+        const startTime = new Date(item.transactionStartTime);
+        const endTime = new Date(item.transactionEndTime);
+        return currentTime >= startTime && currentTime <= endTime;
+      }).length;
+      this.updatePieChart(); // 更新饼状图
+    },
+    updatePieChart() {
+    const chartInstance = echarts.getInstanceByDom(this.$refs.pieChart);
+    if (!chartInstance) return;
+    chartInstance.setOption({
+      series: [
+        {
+          data: [
+            { value: this.pendingOffersCount, name: '待撮合' },
+            { value: this.matchedOffersCount, name: '已完成' },
+            { value: this.cancelledOffersCount, name: '已撤销' },
+            // 根据需要添加更多状态
+          ],
+        }
+      ]
+    });
+  },
     // 新增：初始化WebSocket连接
     initWebSocket() {
       // 检查浏览器是否支持WebSocket
@@ -476,12 +675,12 @@ export default {
       // }
 
       this.socket.onmessage = (event) => {
-    console.log('收到消息:', event.data)
+    //console.log('收到消息:', event.data)
 
     // 解析 JSON 数据
     try {
         const messageData = JSON.parse(event.data)
-        console.log('解析后的消息:', messageData)
+        //console.log('解析后的消息:', messageData)
 
         // 提取需要的信息
         const messageType = messageData.type || 'info'
@@ -535,7 +734,7 @@ export default {
       clearTimeout(this.messageTimer)
       this.messageTimer = setTimeout(() => {
         this.message = ''
-      }, 5000)
+      }, 60000)
     }
   }
 }
@@ -574,17 +773,20 @@ export default {
 .search-container {
   margin-top: 30px;
 }
-
+.chart-container {
+  margin-top: 20px;
+}
 /* 新增：消息提示样式 */
 .notification {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 75px;
+  right: 200px;
   padding: 12px 20px;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  color: white;
+  color: black; // 修改文字颜色为黑色
+  font-weight: bold; // 文字加粗
   transition: all 0.3s ease;
   
   &.info {

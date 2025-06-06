@@ -133,6 +133,17 @@ export const userRoutes = [
   //   component: () => import('@/views/uplink/index'),
   //   meta: { title: '溯源信息录入', icon: 'el-icon-edit-outline' }
   // },
+  // {
+  //   path: '/trace',
+  //   component: Layout,
+  //   //redirect: '/trace',
+  //   children: [{
+  //     path: 'trace',
+  //     name: 'Trace',
+  //     component: () => import('@/views/trace/index'),
+  //     meta: { title: '用户溯源信息查询', icon: 'el-icon-search', roles: ['普通用户'] }
+  //   }]
+  // },
   {
     path: '/trace',
     component: Layout,
@@ -140,7 +151,7 @@ export const userRoutes = [
     children: [{
       path: 'trace',
       name: 'Trace',
-      component: () => import('@/views/trace/index'),
+      component: () => import('@/views/trace/offerTrace'),
       meta: { title: '用户溯源信息查询', icon: 'el-icon-search', roles: ['普通用户'] }
     }]
   },
